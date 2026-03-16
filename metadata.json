@@ -1,0 +1,7 @@
+{
+  "name": "BlueVault",
+  "description": "Base varietale myrtille pour LDA Maroc",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
