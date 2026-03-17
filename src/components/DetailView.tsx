@@ -97,7 +97,8 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 print:overflow-visible print:p-8">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:p-8">
+        <div className="max-w-4xl mx-auto">
         {(tab === 'info' || document.body.classList.contains('print-mode')) && (
           <div className={`space-y-6 ${tab !== 'info' ? 'hidden print:block' : ''}`}>
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
@@ -259,6 +260,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

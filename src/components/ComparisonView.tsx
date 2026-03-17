@@ -39,7 +39,8 @@ export default function ComparisonView({ v1, v2, onClose }: ComparisonViewProps)
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
           {/* Header with photos */}
           <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 border-b border-gray-200">
@@ -83,6 +84,7 @@ export default function ComparisonView({ v1, v2, onClose }: ComparisonViewProps)
             <Info size={12} />
             Les indicateurs <Check size={10} className="inline" /> marquent la valeur la plus élevée pour les critères quantitatifs.
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -94,7 +94,8 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* AI Summary Card */}
         <div className="bg-[#151619] text-white rounded-2xl p-5 shadow-xl border border-[#2A2B30] relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -190,6 +191,7 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

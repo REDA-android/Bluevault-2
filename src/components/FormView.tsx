@@ -170,7 +170,8 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
         {showDraftPrompt && (
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col gap-3 shadow-sm">
             <div className="flex items-center gap-2 text-blue-800 text-sm font-medium">
@@ -369,6 +370,7 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
             <Trash2 size={16} /> Supprimer la variété
           </button>
         )}
+        </div>
       </div>
 
       {photoToDelete !== null && (
