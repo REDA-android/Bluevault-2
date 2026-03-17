@@ -1,7 +1,18 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error('GEMINI_API_KEY environment variable is required');
+    }
+    aiClient = new GoogleGenAI({ apiKey: key });
+  }
+  return aiClient;
+}
+
 const STORAGE_KEY = "bluevault:varieties";
 
 // ─── ICONS ──────────────────────────────────────────────────────────────────
@@ -210,7 +221,7 @@ ${geoLines.length ? "\nDonnées géographiques EXIF (localisation réelle des ph
 
   parts.push({ text: prompt });
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-3.1-pro-preview",
     contents: { parts },
     config: {
