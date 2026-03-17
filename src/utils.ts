@@ -4,9 +4,14 @@ import exifr from "exifr";
 let aiClient: GoogleGenAI | null = null;
 export function getAI(): GoogleGenAI {
   if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
+    // process.env.GEMINI_API_KEY est utilisé par AI Studio
+    // import.meta.env.VITE_GEMINI_API_KEY sera utilisé par Vercel/Vite
+    const key = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) 
+      ? process.env.GEMINI_API_KEY 
+      : import.meta.env.VITE_GEMINI_API_KEY;
+    
     if (!key) {
-      throw new Error('GEMINI_API_KEY environment variable is required');
+      throw new Error('La clé API Gemini est manquante. Veuillez configurer VITE_GEMINI_API_KEY.');
     }
     aiClient = new GoogleGenAI({ apiKey: key });
   }

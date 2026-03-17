@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, signInWithPopup, googleProvider, signOut, onAuthStateChanged, collection, onSnapshot, doc, setDoc, deleteDoc, query, where } from './firebase';
 import { Variety } from './types';
 import { getAI } from './utils';
 import { Type, ThinkingLevel } from '@google/genai';
@@ -9,8 +8,6 @@ import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
-  const [authReady, setAuthReady] = useState(false);
   const [varieties, setVarieties] = useState<Variety[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'home' | 'form' | 'detail'>('home');
@@ -26,57 +23,38 @@ export default function App() {
   useEffect(() => setCurrentPage(1), [search, sortBy, sortDirection]);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthReady(true);
-    });
-    return unsub;
+    // Load from localStorage on mount
+    const saved = localStorage.getItem('bluevault_varieties');
+    if (saved) {
+      try {
+        setVarieties(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse local varieties", e);
+      }
+    }
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (!authReady) return;
-    if (!user) {
-      setVarieties([]);
-      setLoading(false);
-      return;
-    }
-
-    const q = query(collection(db, 'varieties'), where('uid', '==', user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Variety));
-      setVarieties(data.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
-      setLoading(false);
-    }, (err) => {
-      console.error("Firestore error:", err);
-      setLoading(false);
-    });
-
-    return unsub;
-  }, [user, authReady]);
-
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleSave = async (data: Partial<Variety>) => {
-    if (!user) return;
     try {
       const isNew = !data.id;
       const id = data.id || Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-      const docRef = doc(db, 'varieties', id);
       
-      const payload: any = {
+      const payload: Variety = {
         ...data,
-        uid: user.uid,
-        updatedAt: Date.now()
-      };
-      if (isNew) payload.createdAt = Date.now();
+        id,
+        uid: 'local-user',
+        updatedAt: Date.now(),
+        createdAt: isNew ? Date.now() : (data.createdAt || Date.now()),
+        name: data.name || 'Unnamed Variety'
+      } as Variety;
 
-      await setDoc(docRef, payload, { merge: true });
+      setVarieties(prev => {
+        const newVarieties = isNew ? [...prev, payload] : prev.map(v => v.id === id ? payload : v);
+        localStorage.setItem('bluevault_varieties', JSON.stringify(newVarieties));
+        return newVarieties;
+      });
+
       setView('home');
       setSelectedVariety(null);
     } catch (e) {
@@ -86,9 +64,13 @@ export default function App() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!user || !window.confirm("Supprimer cette variété ?")) return;
+    if (!window.confirm("Supprimer cette variété ?")) return;
     try {
-      await deleteDoc(doc(db, 'varieties', id));
+      setVarieties(prev => {
+        const newVarieties = prev.filter(v => v.id !== id);
+        localStorage.setItem('bluevault_varieties', JSON.stringify(newVarieties));
+        return newVarieties;
+      });
       setView('home');
       setSelectedVariety(null);
     } catch (e) {
@@ -158,27 +140,10 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     }
   };
 
-  if (!authReady || (user && loading)) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#E6E6E6]">
         <Loader2 className="animate-spin text-[#00FF9D]" size={48} />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#E6E6E6] p-4">
-        <div className="bg-[#151619] p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border border-[#2A2B30]">
-          <div className="w-16 h-16 bg-[#00FF9D]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Database className="text-[#00FF9D]" size={32} />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2 font-mono tracking-tight">BlueVault</h1>
-          <p className="text-gray-400 text-sm mb-8">Base variétale myrtille sécurisée</p>
-          <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 bg-white text-black font-medium py-3 px-4 rounded-xl hover:bg-gray-100 transition-colors">
-            <LogIn size={20} /> Continuer avec Google
-          </button>
-        </div>
       </div>
     );
   }
@@ -221,12 +186,9 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                   </div>
                   <div>
                     <h1 className="font-mono font-bold text-lg tracking-tight">BlueVault</h1>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">{user.email}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">Stockage Local</p>
                   </div>
                 </div>
-                <button onClick={() => signOut(auth)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors">
-                  <LogOut size={18} />
-                </button>
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-6">
