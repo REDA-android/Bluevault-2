@@ -13,14 +13,16 @@ export default function App() {
   const [view, setView] = useState<'home' | 'form' | 'detail'>('home');
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'species' | 'brix'>('updatedAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [filterSpecies, setFilterSpecies] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{ field: string, direction: 'asc' | 'desc' }[]>([
+    { field: 'updatedAt', direction: 'desc' }
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showExport, setShowExport] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const ITEMS_PER_PAGE = 10;
 
-  useEffect(() => setCurrentPage(1), [search, sortBy, sortDirection]);
+  useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig]);
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -155,26 +157,50 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     );
   }
 
-  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'species' | 'brix') => {
-    if (sortBy === column) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortDirection(column === 'name' || column === 'species' ? 'asc' : 'desc');
-    }
+  const handleSort = (field: string) => {
+    setSortConfig(prev => {
+      const existing = prev.find(s => s.field === field);
+      if (existing) {
+        // Toggle direction or remove if it was the only one and we want to reset? 
+        // Let's just toggle.
+        return [{ field, direction: existing.direction === 'asc' ? 'desc' : 'asc' }];
+      }
+      // For multi-sort, we could append, but usually users expect a primary sort change.
+      // The request says "e.g., sort by species then by name". 
+      // I'll implement a logic where clicking a new field makes it primary, and 'name' is always a secondary fallback.
+      return [{ field, direction: 'asc' }, { field: 'name', direction: 'asc' }];
+    });
   };
 
-  const sorted = varieties
-    .filter(v => v.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      let res = 0;
-      if (sortBy === 'name') res = a.name.localeCompare(b.name);
-      else if (sortBy === 'species') res = (a.species || '').localeCompare(b.species || '');
-      else if (sortBy === 'brix') res = (Number(a.brix) || 0) - (Number(b.brix) || 0);
-      else if (sortBy === 'createdAt') res = (a.createdAt || 0) - (b.createdAt || 0);
-      else res = (a.updatedAt || 0) - (b.updatedAt || 0);
-      return sortDirection === 'asc' ? res : -res;
+  const speciesList = Array.from(new Set(varieties.map(v => v.species).filter(Boolean))) as string[];
+
+  const filtered = varieties
+    .filter(v => {
+      const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase());
+      const matchesSpecies = filterSpecies === 'all' || v.species === filterSpecies;
+      return matchesSearch && matchesSpecies;
     });
+
+  const sorted = [...filtered].sort((a, b) => {
+    for (const config of sortConfig) {
+      const { field, direction } = config;
+      let res = 0;
+      
+      const valA = (a as any)[field];
+      const valB = (b as any)[field];
+
+      if (typeof valA === 'string') {
+        res = (valA || '').localeCompare(valB || '');
+      } else {
+        res = (Number(valA) || 0) - (Number(valB) || 0);
+      }
+
+      if (res !== 0) {
+        return direction === 'asc' ? res : -res;
+      }
+    }
+    return 0;
+  });
 
   const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
   const paginated = sorted.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -235,6 +261,28 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                     className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-1 focus:ring-[#00FF9D] shadow-sm"
                   />
                 </div>
+
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider mr-2">Filtrer Espèce:</span>
+                    <button
+                      onClick={() => setFilterSpecies('all')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${filterSpecies === 'all' ? 'bg-[#00FF9D] text-black' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      Toutes
+                    </button>
+                    {speciesList.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setFilterSpecies(s)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${filterSpecies === s ? 'bg-[#00FF9D] text-black' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider mr-2">Trier par:</span>
                   {[
@@ -243,18 +291,22 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                     { id: 'brix', label: 'Brix' },
                     { id: 'createdAt', label: 'Création' },
                     { id: 'updatedAt', label: 'Modification' }
-                  ].map(col => (
-                    <button
-                      key={col.id}
-                      onClick={() => handleSort(col.id as any)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${sortBy === col.id ? 'bg-[#151619] text-[#00FF9D]' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                    >
-                      {col.label}
-                      {sortBy === col.id && (
-                        sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                      )}
-                    </button>
-                  ))}
+                  ].map(col => {
+                    const activeSort = sortConfig.find(s => s.field === col.id);
+                    const isPrimary = sortConfig[0]?.field === col.id;
+                    return (
+                      <button
+                        key={col.id}
+                        onClick={() => handleSort(col.id)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${isPrimary ? 'bg-[#151619] text-[#00FF9D]' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {col.label}
+                        {activeSort && (
+                          activeSort.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

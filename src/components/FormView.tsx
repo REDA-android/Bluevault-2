@@ -26,6 +26,8 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
   const [photos, setPhotos] = useState<Photo[]>(initialData?.photos ? JSON.parse(initialData.photos) : []);
   const [loadingAI, setLoadingAI] = useState<'aroma' | 'sensitivities' | null>(null);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<number | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,8 +64,25 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
     setShowDraftPrompt(false);
   };
 
+  const validate = (name: string, value: any) => {
+    let error = '';
+    if (name === 'name' && !value) error = 'Le nom est obligatoire';
+    if (name === 'brix' && value && (isNaN(Number(value)) || Number(value) < 0)) error = 'Brix doit être un nombre positif';
+    if (name === 'fruit_size' && value && (isNaN(Number(value)) || Number(value) < 0)) error = 'Le calibre doit être un nombre positif';
+    if (name === 'yield_estimate' && value && (isNaN(Number(value)) || Number(value) < 0)) error = 'Le rendement doit être un nombre positif';
+    
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      if (error) newErrors[name] = error;
+      else delete newErrors[name];
+      return newErrors;
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    validate(name, value);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +113,14 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
   };
 
   const removePhoto = (index: number) => {
-    setPhotos(photos.filter((_, i) => i !== index));
+    setPhotoToDelete(index);
+  };
+
+  const confirmRemovePhoto = () => {
+    if (photoToDelete !== null) {
+      setPhotos(photos.filter((_, i) => i !== photoToDelete));
+      setPhotoToDelete(null);
+    }
   };
 
   const suggestField = async (field: 'aroma' | 'sensitivities') => {
@@ -119,6 +145,12 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name) {
+      setErrors(prev => ({ ...prev, name: 'Le nom est obligatoire' }));
+      return;
+    }
+    if (Object.keys(errors).length > 0) return;
+    
     if (!initialData) localStorage.removeItem('bluevault_draft');
     onSave({ ...formData, photos: JSON.stringify(photos) });
   };
@@ -156,7 +188,8 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Nom de la variété *</label>
-              <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-1 focus:ring-[#00FF9D]" placeholder="Ex: Duke" />
+              <input required name="name" value={formData.name || ''} onChange={handleChange} className={`w-full bg-gray-50 border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-1 focus:ring-[#00FF9D]`} placeholder="Ex: Duke" />
+              {errors.name && <p className="text-[10px] text-red-500 mt-1">{errors.name}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -208,7 +241,8 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Rendement estimé (kg/pl)</label>
-                <input type="number" step="0.1" min="0" name="yield_estimate" value={formData.yield_estimate || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                <input type="number" step="0.1" min="0" name="yield_estimate" value={formData.yield_estimate || ''} onChange={handleChange} className={`w-full bg-gray-50 border ${errors.yield_estimate ? 'border-red-500' : 'border-gray-200'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]`} />
+                {errors.yield_estimate && <p className="text-[10px] text-red-500 mt-1">{errors.yield_estimate}</p>}
               </div>
             </div>
           </div>
@@ -220,11 +254,13 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Calibre (mm)</label>
-                <input type="number" step="0.1" min="0" name="fruit_size" value={formData.fruit_size || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                <input type="number" step="0.1" min="0" name="fruit_size" value={formData.fruit_size || ''} onChange={handleChange} className={`w-full bg-gray-50 border ${errors.fruit_size ? 'border-red-500' : 'border-gray-200'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]`} />
+                {errors.fruit_size && <p className="text-[10px] text-red-500 mt-1">{errors.fruit_size}</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Brix (°Bx)</label>
-                <input type="number" step="0.1" min="0" name="brix" value={formData.brix || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                <input type="number" step="0.1" min="0" name="brix" value={formData.brix || ''} onChange={handleChange} className={`w-full bg-gray-50 border ${errors.brix ? 'border-red-500' : 'border-gray-200'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]`} />
+                {errors.brix && <p className="text-[10px] text-red-500 mt-1">{errors.brix}</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur</label>
@@ -334,6 +370,19 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
           </button>
         )}
       </div>
+
+      {photoToDelete !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-xs w-full shadow-2xl">
+            <h4 className="text-sm font-bold text-gray-800 mb-2">Supprimer la photo ?</h4>
+            <p className="text-xs text-gray-500 mb-6">Cette action est irréversible.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setPhotoToDelete(null)} className="flex-1 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Annuler</button>
+              <button onClick={confirmRemovePhoto} className="flex-1 py-2 text-xs font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
