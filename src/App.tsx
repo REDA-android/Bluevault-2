@@ -2,16 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Variety } from './types';
 import { getAI } from './utils';
 import { Type, ThinkingLevel } from '@google/genai';
-import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import FormView from './components/FormView';
 import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
+import Dashboard from './components/Dashboard';
+import ComparisonView from './components/ComparisonView';
+import { LayoutDashboard, GitCompare } from 'lucide-react';
 
 export default function App() {
   const [varieties, setVarieties] = useState<Variety[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'home' | 'form' | 'detail'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'detail' | 'dashboard' | 'compare'>('home');
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
+  const [compareVarieties, setCompareVarieties] = useState<Variety[]>([]);
+  const [isCompareMode, setIsCompareMode] = useState(false);
   const [search, setSearch] = useState('');
   const [filterSpecies, setFilterSpecies] = useState<string>('all');
   const [sortConfig, setSortConfig] = useState<{ field: string, direction: 'asc' | 'desc' }[]>([
@@ -36,6 +41,21 @@ export default function App() {
     }
     setLoading(false);
   }, []);
+
+  const toggleCompare = (v: Variety) => {
+    setCompareVarieties(prev => {
+      const exists = prev.find(p => p.id === v.id);
+      if (exists) return prev.filter(p => p.id !== v.id);
+      if (prev.length >= 2) return [prev[1], v];
+      return [...prev, v];
+    });
+  };
+
+  const startComparison = () => {
+    if (compareVarieties.length === 2) {
+      setView('compare');
+    }
+  };
 
   const handleSave = async (data: Partial<Variety>) => {
     try {
@@ -222,6 +242,14 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest">Stockage Local</p>
                   </div>
                 </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setView('dashboard')} className="p-2 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors">
+                    <LayoutDashboard size={18} />
+                  </button>
+                  <button onClick={() => setIsCompareMode(!isCompareMode)} className={`p-2 rounded-xl flex items-center justify-center transition-colors ${isCompareMode ? 'bg-[#00FF9D] text-black' : 'bg-[#2A2B30] text-white hover:bg-[#3A3B40]'}`}>
+                    <GitCompare size={18} />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-6">
@@ -250,6 +278,21 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto bg-[#f5f5f5]">
+              {isCompareMode && (
+                <div className="mb-4 bg-[#151619] text-white p-4 rounded-2xl shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-top-4">
+                  <div className="text-xs">
+                    <span className="font-bold text-[#00FF9D]">{compareVarieties.length}</span> / 2 sélectionnés
+                  </div>
+                  <button 
+                    onClick={startComparison}
+                    disabled={compareVarieties.length < 2}
+                    className="bg-[#00FF9D] text-black px-4 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50 transition-all"
+                  >
+                    Comparer
+                  </button>
+                </div>
+              )}
+
               <div className="mb-6">
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -311,23 +354,44 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
               </div>
 
               <div className="space-y-3">
-                {paginated.map(v => (
-                  <div key={v.id} onClick={() => { setSelectedVariety(v); setView('detail'); }} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#00FF9D] hover:shadow-md transition-all group">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-gray-800 text-base">{v.name}</h3>
-                        <div className="flex items-center gap-1">
-                          {v.photos && JSON.parse(v.photos).length > 0 && <Camera size={14} className="text-blue-500" title="Photos disponibles" />}
-                          {v.ai_analysis && <Sparkles size={14} className="text-[#00CC7D]" title="Analyse IA disponible" />}
+                {paginated.map(v => {
+                  const isSelectedForCompare = compareVarieties.some(p => p.id === v.id);
+                  return (
+                    <div 
+                      key={v.id} 
+                      onClick={() => {
+                        if (isCompareMode) {
+                          toggleCompare(v);
+                        } else {
+                          setSelectedVariety(v); 
+                          setView('detail');
+                        }
+                      }} 
+                      className={`bg-white border rounded-xl p-4 flex items-center justify-between cursor-pointer transition-all group ${isSelectedForCompare ? 'border-[#00FF9D] ring-2 ring-[#00FF9D]/20 shadow-md' : 'border-gray-200 hover:border-[#00FF9D] hover:shadow-md'}`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-gray-800 text-base">{v.name}</h3>
+                          <div className="flex items-center gap-1">
+                            {v.photos && JSON.parse(v.photos).length > 0 && <Camera size={14} className="text-blue-500" title="Photos disponibles" />}
+                            {v.ai_analysis && <Sparkles size={14} className="text-[#00CC7D]" title="Analyse IA disponible" />}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{v.species || 'Espèce inconnue'}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {isCompareMode && (
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelectedForCompare ? 'bg-[#00FF9D] border-[#00FF9D]' : 'border-gray-300'}`}>
+                            {isSelectedForCompare && <Check size={12} className="text-black font-bold" />}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-400">
+                          {new Date(v.updatedAt || 0).toLocaleDateString()}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{v.species || 'Espèce inconnue'}</p>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {new Date(v.updatedAt || 0).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {paginated.length === 0 && (
                   <div className="text-center py-10 text-gray-400 text-sm">
                     Aucune variété trouvée.
@@ -378,6 +442,14 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
             onAnalyze={() => handleAnalyze(selectedVariety)}
             analyzing={analyzing}
           />
+        )}
+
+        {view === 'dashboard' && (
+          <Dashboard varieties={varieties} onClose={() => setView('home')} />
+        )}
+
+        {view === 'compare' && compareVarieties.length === 2 && (
+          <ComparisonView v1={compareVarieties[0]} v2={compareVarieties[1]} onClose={() => setView('home')} />
         )}
 
         {showExport && (
