@@ -258,6 +258,10 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
                 <input name="habit" value={formData.habit || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Érigé, Étalé" />
               </div>
               <div>
+                <TooltipLabel label="Zone de rusticité" tooltip="Zone climatique de rusticité (ex: 4a, 5b)." />
+                <input name="hardiness_zone" value={formData.hardiness_zone || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: 4a" />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Rendement estimé (kg/pl)</label>
                 <input type="number" step="0.1" min="0" name="yield_estimate" value={formData.yield_estimate || ''} onChange={handleChange} className={`w-full bg-gray-50 border ${errors.yield_estimate ? 'border-red-500' : 'border-gray-200'} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]`} />
                 {errors.yield_estimate && <p className="text-[10px] text-red-500 mt-1">{errors.yield_estimate}</p>}
@@ -322,6 +326,34 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
                 </button>
               </div>
               <input name="sensitivities" value={formData.sensitivities || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Botrytis, Rouille..." />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Profil Sensoriel (1-5)</h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Douceur (Sucre)</label>
+                <StarRating value={formData.sweetness_score || 0} onChange={(val) => setFormData(prev => ({ ...prev, sweetness_score: val }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Acidité</label>
+                <StarRating value={formData.acidity_score || 0} onChange={(val) => setFormData(prev => ({ ...prev, acidity_score: val }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Fermeté</label>
+                <StarRating value={formData.firmness_score || 0} onChange={(val) => setFormData(prev => ({ ...prev, firmness_score: val }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Calibre (Taille)</label>
+                <StarRating value={formData.size_score || 0} onChange={(val) => setFormData(prev => ({ ...prev, size_score: val }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Arôme</label>
+                <StarRating value={formData.aroma_score || 0} onChange={(val) => setFormData(prev => ({ ...prev, aroma_score: val }))} />
+              </div>
             </div>
           </div>
         </div>

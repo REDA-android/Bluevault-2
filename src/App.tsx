@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Variety } from './types';
 import { getAI } from './utils';
 import { Type, ThinkingLevel } from '@google/genai';
-import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check, X, Star } from 'lucide-react';
+import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check, X, Star, Upload } from 'lucide-react';
 import FormView from './components/FormView';
 import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
 import Dashboard from './components/Dashboard';
 import ComparisonView from './components/ComparisonView';
 import MapView from './components/MapView';
-import { LayoutDashboard, GitCompare, MapPin, SlidersHorizontal } from 'lucide-react';
+import GalleryView from './components/GalleryView';
+import SettingsView from './components/SettingsView';
+import PrintAllView from './components/PrintAllView';
+import { LayoutDashboard, GitCompare, MapPin, SlidersHorizontal, Image as ImageIcon, Settings, Printer } from 'lucide-react';
+import Papa from 'papaparse';
 
 export default function App() {
   const [varieties, setVarieties] = useState<Variety[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'home' | 'form' | 'detail' | 'dashboard' | 'compare' | 'map'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'detail' | 'dashboard' | 'compare' | 'map' | 'gallery' | 'settings' | 'printAll'>('home');
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [compareVarieties, setCompareVarieties] = useState<Variety[]>([]);
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -38,6 +42,7 @@ export default function App() {
   const [isMagicSearching, setIsMagicSearching] = useState(false);
   const [magicQuery, setMagicQuery] = useState('');
   const ITEMS_PER_PAGE = 10;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig, minBrix, maxBrix, minYield, maxYield]);
 
@@ -230,6 +235,68 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     }
   };
 
+  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const importedVarieties = results.data.map((row: any) => {
+          return {
+            id: row.id || crypto.randomUUID(),
+            uid: 'local',
+            name: row.name || 'Inconnue',
+            species: row.species || '',
+            breeder: row.breeder || '',
+            site: row.site || '',
+            flowering_date: row.flowering_date || '',
+            maturity_date: row.maturity_date || '',
+            precocity: row.precocity || '',
+            fruit_size: row.fruit_size ? Number(row.fruit_size) : undefined,
+            color: row.color || '',
+            bloom: row.bloom || '',
+            fruit_shape: row.fruit_shape || '',
+            brix: row.brix ? Number(row.brix) : undefined,
+            firmness: row.firmness || '',
+            acidity: row.acidity || '',
+            aroma: row.aroma || '',
+            vigor: row.vigor || '',
+            habit: row.habit || '',
+            yield_estimate: row.yield_estimate ? Number(row.yield_estimate) : undefined,
+            harvest_start: row.harvest_start ? Number(row.harvest_start) : undefined,
+            harvest_end: row.harvest_end ? Number(row.harvest_end) : undefined,
+            status: row.status || 'active',
+            rating: row.rating ? Number(row.rating) : undefined,
+            hardiness_zone: row.hardiness_zone || '',
+            sweetness_score: row.sweetness_score ? Number(row.sweetness_score) : undefined,
+            acidity_score: row.acidity_score ? Number(row.acidity_score) : undefined,
+            firmness_score: row.firmness_score ? Number(row.firmness_score) : undefined,
+            size_score: row.size_score ? Number(row.size_score) : undefined,
+            aroma_score: row.aroma_score ? Number(row.aroma_score) : undefined,
+            sensitivities: row.sensitivities || '',
+            free_notes: row.free_notes || '',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          } as Variety;
+        });
+
+        setVarieties(prev => {
+          const newVarieties = [...prev, ...importedVarieties];
+          localStorage.setItem('bluevault_varieties', JSON.stringify(newVarieties));
+          return newVarieties;
+        });
+        alert(`${importedVarieties.length} variétés importées avec succès !`);
+      },
+      error: (error: any) => {
+        console.error("CSV Import Error:", error);
+        alert("Erreur lors de l'importation du CSV.");
+      }
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const speciesList = Array.from(new Set(varieties.map(v => v.species).filter(Boolean))) as string[];
 
   const filtered = varieties
@@ -295,8 +362,17 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                   <button onClick={() => setView('map')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Carte">
                     <MapPin size={20} />
                   </button>
+                  <button onClick={() => setView('gallery')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Galerie">
+                    <ImageIcon size={20} />
+                  </button>
                   <button onClick={() => setView('dashboard')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Tableau de bord">
                     <LayoutDashboard size={20} />
+                  </button>
+                  <button onClick={() => setView('settings')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Paramètres">
+                    <Settings size={20} />
+                  </button>
+                  <button onClick={() => setView('printAll')} disabled={varieties.length === 0} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50" title="Imprimer tout">
+                    <Printer size={20} />
                   </button>
                   <button onClick={() => setIsCompareMode(!isCompareMode)} className={`p-3 rounded-xl flex items-center justify-center transition-colors ${isCompareMode ? 'bg-[#00FF9D] text-black shadow-[0_0_15px_rgba(0,255,157,0.3)]' : 'bg-[#2A2B30] text-white hover:bg-[#3A3B40]'}`} title="Comparer">
                     <GitCompare size={20} />
@@ -323,7 +399,11 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                 <button onClick={() => { setSelectedVariety(null); setView('form'); }} className="flex-1 bg-[#00FF9D] hover:bg-[#00CC7D] text-black font-bold py-3 md:py-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-[0_0_20px_rgba(0,255,157,0.2)] hover:shadow-[0_0_25px_rgba(0,255,157,0.4)]">
                   <Plus size={20} /> Nouvelle variété
                 </button>
-                <button onClick={() => setShowExport(true)} disabled={varieties.length === 0} className="px-5 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50">
+                <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCsv} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} className="px-5 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Importer CSV">
+                  <Upload size={20} />
+                </button>
+                <button onClick={() => setShowExport(true)} disabled={varieties.length === 0} className="px-5 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50" title="Exporter">
                   <Download size={20} />
                 </button>
               </div>
@@ -573,6 +653,130 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
               )}
             </div>
           </>
+        )}
+
+        {view === 'gallery' && (
+          <div className="flex-1 overflow-y-auto bg-[#f5f5f5]">
+            <div className="p-4 bg-white border-b border-gray-200 sticky top-0 z-10">
+              <button onClick={() => setView('home')} className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium">
+                <ChevronLeft size={20} /> Retour
+              </button>
+            </div>
+            <GalleryView varieties={varieties} onSelectVariety={(v) => { setSelectedVariety(v); setView('detail'); }} />
+          </div>
+        )}
+
+        {view === 'settings' && (
+          <div className="flex-1 overflow-y-auto bg-[#f5f5f5]">
+            <div className="p-4 bg-white border-b border-gray-200 sticky top-0 z-10">
+              <button onClick={() => setView('home')} className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium">
+                <ChevronLeft size={20} /> Retour
+              </button>
+            </div>
+            <SettingsView 
+              onClearData={() => {
+                setVarieties([]);
+                localStorage.removeItem('bluevault_varieties');
+                alert("Toutes les données ont été effacées.");
+                setView('home');
+              }}
+              onLoadSampleData={() => {
+                const sampleData: Variety[] = [
+                  {
+                    id: crypto.randomUUID(),
+                    uid: 'local',
+                    name: 'Duke',
+                    species: 'Vaccinium corymbosum',
+                    breeder: 'USDA',
+                    site: 'Champ Nord',
+                    flowering_date: '2023-04-15',
+                    maturity_date: '2023-06-20',
+                    precocity: 'Très précoce',
+                    fruit_size: 18,
+                    color: 'Bleu clair',
+                    bloom: 'Fort',
+                    fruit_shape: 'Rond',
+                    brix: 11,
+                    firmness: 'Très ferme',
+                    acidity: 'Faible',
+                    aroma: 'Doux',
+                    vigor: 'Forte',
+                    habit: 'Érigé',
+                    yield_estimate: 6,
+                    harvest_start: 5,
+                    harvest_end: 6,
+                    status: 'active',
+                    rating: 4,
+                    hardiness_zone: '4-7',
+                    sweetness_score: 3,
+                    acidity_score: 2,
+                    firmness_score: 5,
+                    size_score: 4,
+                    aroma_score: 3,
+                    sensitivities: 'Sensible au gel tardif',
+                    free_notes: 'Excellente variété précoce pour le marché frais.',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                  },
+                  {
+                    id: crypto.randomUUID(),
+                    uid: 'local',
+                    name: 'Bluecrop',
+                    species: 'Vaccinium corymbosum',
+                    breeder: 'USDA',
+                    site: 'Champ Sud',
+                    flowering_date: '2023-05-01',
+                    maturity_date: '2023-07-15',
+                    precocity: 'Mi-saison',
+                    fruit_size: 16,
+                    color: 'Bleu moyen',
+                    bloom: 'Moyen',
+                    fruit_shape: 'Légèrement aplati',
+                    brix: 12,
+                    firmness: 'Ferme',
+                    acidity: 'Moyenne',
+                    aroma: 'Classique',
+                    vigor: 'Très forte',
+                    habit: 'Étalé',
+                    yield_estimate: 8,
+                    harvest_start: 6,
+                    harvest_end: 7,
+                    status: 'active',
+                    rating: 5,
+                    hardiness_zone: '4-7',
+                    sweetness_score: 4,
+                    acidity_score: 3,
+                    firmness_score: 4,
+                    size_score: 3,
+                    aroma_score: 4,
+                    sensitivities: 'Tolérant à la sécheresse',
+                    free_notes: 'La variété la plus plantée au monde. Très fiable.',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                  }
+                ];
+                setVarieties(prev => {
+                  const newVarieties = [...prev, ...sampleData];
+                  localStorage.setItem('bluevault_varieties', JSON.stringify(newVarieties));
+                  return newVarieties;
+                });
+                alert("Données de démonstration chargées avec succès.");
+                setView('home');
+              }}
+            />
+          </div>
+        )}
+
+        {view === 'printAll' && (
+          <div className="fixed inset-0 z-[100] bg-white overflow-y-auto">
+            <div className="p-4 bg-gray-100 border-b border-gray-200 sticky top-0 z-[101] flex justify-between items-center print:hidden">
+              <h2 className="font-bold text-gray-800">Préparation de l'impression...</h2>
+              <button onClick={() => setView('home')} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors">
+                Annuler
+              </button>
+            </div>
+            <PrintAllView varieties={varieties} onClose={() => setView('home')} />
+          </div>
         )}
 
         {view === 'form' && (

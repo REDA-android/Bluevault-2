@@ -1,6 +1,7 @@
 import React from 'react';
 import { Variety } from '../types';
 import { X, Check, Minus, Info } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from 'recharts';
 
 interface ComparisonViewProps {
   v1: Variety;
@@ -29,6 +30,15 @@ const ComparisonRow = ({ label, val1, val2, isBetter }: { label: string, val1: a
 export default function ComparisonView({ v1, v2, onClose }: ComparisonViewProps) {
   const photos1 = v1.photos ? JSON.parse(v1.photos) : [];
   const photos2 = v2.photos ? JSON.parse(v2.photos) : [];
+
+  const sensoryData = [
+    { subject: 'Douceur', v1: v1.sweetness_score || 0, v2: v2.sweetness_score || 0, fullMark: 5 },
+    { subject: 'Acidité', v1: v1.acidity_score || 0, v2: v2.acidity_score || 0, fullMark: 5 },
+    { subject: 'Fermeté', v1: v1.firmness_score || 0, v2: v2.firmness_score || 0, fullMark: 5 },
+    { subject: 'Calibre', v1: v1.size_score || 0, v2: v2.size_score || 0, fullMark: 5 },
+    { subject: 'Arôme', v1: v1.aroma_score || 0, v2: v2.aroma_score || 0, fullMark: 5 },
+  ];
+  const hasSensoryData = sensoryData.some(d => d.v1 > 0 || d.v2 > 0);
 
   return (
     <div className="fixed inset-0 bg-[#E6E6E6] z-50 flex flex-col overflow-hidden">
@@ -79,6 +89,24 @@ export default function ComparisonView({ v1, v2, onClose }: ComparisonViewProps)
             <ComparisonRow label="Fermeté" val1={v1.firmness} val2={v2.firmness} />
             <ComparisonRow label="Arômes" val1={v1.aroma} val2={v2.aroma} />
           </div>
+
+          {hasSensoryData && (
+            <div className="p-4 border-t border-gray-100 bg-white">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 text-center">Comparaison Sensorielle</h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={sensoryData}>
+                    <PolarGrid stroke="#e5e7eb" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                    <Radar name={v1.name} dataKey="v1" stroke="#00FF9D" fill="#00FF9D" fillOpacity={0.4} />
+                    <Radar name={v2.name} dataKey="v2" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.4} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
           <div className="p-4 bg-gray-50 text-[10px] text-gray-400 flex items-center gap-2">
             <Info size={12} />

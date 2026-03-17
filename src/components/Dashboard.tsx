@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Variety } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { LayoutDashboard, TrendingUp, PieChart as PieIcon, Activity, Sparkles, Loader2, X } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { LayoutDashboard, TrendingUp, PieChart as PieIcon, Activity, Sparkles, Loader2, X, ActivitySquare } from 'lucide-react';
 import { getAI } from '../utils';
 
 interface DashboardProps {
@@ -64,6 +64,33 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
   }, [varieties]);
 
   const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+
+  // 5. Sensory Profile Averages
+  const sensoryAverages = useMemo(() => {
+    let count = 0;
+    let sum = { sweetness: 0, acidity: 0, firmness: 0, size: 0, aroma: 0 };
+    
+    varieties.forEach(v => {
+      if (v.sweetness_score || v.acidity_score || v.firmness_score || v.size_score || v.aroma_score) {
+        count++;
+        sum.sweetness += v.sweetness_score || 0;
+        sum.acidity += v.acidity_score || 0;
+        sum.firmness += v.firmness_score || 0;
+        sum.size += v.size_score || 0;
+        sum.aroma += v.aroma_score || 0;
+      }
+    });
+
+    if (count === 0) return [];
+
+    return [
+      { subject: 'Douceur', value: Number((sum.sweetness / count).toFixed(1)), fullMark: 5 },
+      { subject: 'Acidité', value: Number((sum.acidity / count).toFixed(1)), fullMark: 5 },
+      { subject: 'Fermeté', value: Number((sum.firmness / count).toFixed(1)), fullMark: 5 },
+      { subject: 'Calibre', value: Number((sum.size / count).toFixed(1)), fullMark: 5 },
+      { subject: 'Arôme', value: Number((sum.aroma / count).toFixed(1)), fullMark: 5 },
+    ];
+  }, [varieties]);
 
   const generateAISummary = async () => {
     if (varieties.length === 0) return;
@@ -139,6 +166,27 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Sensory Averages */}
+          {sensoryAverages.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 md:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <ActivitySquare className="text-purple-500" size={18} />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Profil Sensoriel Moyen</h3>
+              </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={sensoryAverages}>
+                    <PolarGrid stroke="#e5e7eb" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                    <Radar name="Moyenne" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
           {/* Brix Distribution */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
             <div className="flex items-center gap-2 mb-4">

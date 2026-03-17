@@ -48,6 +48,12 @@ export interface Variety {
   harvest_end?: number;   // Month 1-12
   status?: 'active' | 'trial' | 'archived';
   rating?: number; // 1-5
+  hardiness_zone?: string;
+  sweetness_score?: number; // 1-5
+  acidity_score?: number; // 1-5
+  firmness_score?: number; // 1-5
+  size_score?: number; // 1-5
+  aroma_score?: number; // 1-5
   sensitivities?: string;
   free_notes?: string;
   photos?: string; // JSON string of Photo[]

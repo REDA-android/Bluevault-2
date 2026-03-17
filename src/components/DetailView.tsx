@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Variety, Photo } from '../types';
 import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer, Star, Share2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { getAI } from '../utils';
 import PhotoGallery from './PhotoGallery';
 import AIComparison from './AIComparison';
@@ -13,9 +14,10 @@ interface DetailViewProps {
   onEdit: () => void;
   onAnalyze: () => void;
   analyzing: boolean;
+  isPrintAllMode?: boolean;
 }
 
-export default function DetailView({ variety, allVarieties, onBack, onEdit, onAnalyze, analyzing }: DetailViewProps) {
+export default function DetailView({ variety, allVarieties, onBack, onEdit, onAnalyze, analyzing, isPrintAllMode }: DetailViewProps) {
   const [tab, setTab] = useState<'info' | 'photos' | 'ai'>('info');
   const [photoSummary, setPhotoSummary] = useState<string | null>(null);
   const [generatingPhotoSummary, setGeneratingPhotoSummary] = useState(false);
@@ -23,6 +25,15 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
   const analysis = variety.ai_analysis ? JSON.parse(variety.ai_analysis) : null;
 
   const firstPhotoWithGPS = photos.find(p => p.exif?.lat && p.exif?.lng);
+
+  const sensoryData = [
+    { subject: 'Douceur', A: variety.sweetness_score || 0, fullMark: 5 },
+    { subject: 'Acidité', A: variety.acidity_score || 0, fullMark: 5 },
+    { subject: 'Fermeté', A: variety.firmness_score || 0, fullMark: 5 },
+    { subject: 'Calibre', A: variety.size_score || 0, fullMark: 5 },
+    { subject: 'Arôme', A: variety.aroma_score || 0, fullMark: 5 },
+  ];
+  const hasSensoryData = sensoryData.some(d => d.A > 0);
 
   const handleGeneratePhotoSummary = async () => {
     if (photos.length === 0) return;
@@ -77,25 +88,27 @@ Partagé via BlueVault.`;
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#E6E6E6] text-[#151619] print:bg-white print:h-auto">
-      <div className="bg-[#151619] text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md print:hidden">
-        <button onClick={onBack} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors"><ArrowLeft size={20} /></button>
-        <div className="relative group flex items-center justify-center">
-          <h2 className="font-mono text-sm uppercase tracking-widest truncate max-w-[200px] cursor-help">{variety.name}</h2>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block w-max bg-[#2A2B30] text-white text-[10px] px-2 py-1 rounded shadow-lg z-50 border border-gray-700">
-            {variety.ai_analysis ? 'Analyse IA disponible' : 'Analyse IA non générée'}
+    <div className={`flex flex-col bg-[#E6E6E6] text-[#151619] print:bg-white print:h-auto ${isPrintAllMode ? 'h-auto' : 'h-full'}`}>
+      {!isPrintAllMode && (
+        <div className="bg-[#151619] text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md print:hidden">
+          <button onClick={onBack} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors"><ArrowLeft size={20} /></button>
+          <div className="relative group flex items-center justify-center">
+            <h2 className="font-mono text-sm uppercase tracking-widest truncate max-w-[200px] cursor-help">{variety.name}</h2>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block w-max bg-[#2A2B30] text-white text-[10px] px-2 py-1 rounded shadow-lg z-50 border border-gray-700">
+              {variety.ai_analysis ? 'Analyse IA disponible' : 'Analyse IA non générée'}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleShare} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Partager le résumé">
+              <Share2 size={20} />
+            </button>
+            <button onClick={() => window.print()} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Imprimer le Passeport Variétal">
+              <Printer size={20} />
+            </button>
+            <button onClick={onEdit} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-[#00FF9D]"><Edit3 size={20} /></button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleShare} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Partager le résumé">
-            <Share2 size={20} />
-          </button>
-          <button onClick={() => window.print()} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Imprimer le Passeport Variétal">
-            <Printer size={20} />
-          </button>
-          <button onClick={onEdit} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-[#00FF9D]"><Edit3 size={20} /></button>
-        </div>
-      </div>
+      )}
 
       <div className="hidden print:flex p-8 pb-4 border-b-4 border-black mb-6 justify-between items-end">
         <div>
@@ -113,17 +126,19 @@ Partagé via BlueVault.`;
         </div>
       </div>
 
-      <div className="flex border-b border-gray-300 bg-white sticky top-[60px] z-10 shadow-sm print:hidden">
-        <button onClick={() => setTab('info')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'info' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
-          <Info size={14} /> Info
-        </button>
-        <button onClick={() => setTab('photos')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'photos' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
-          <ImageIcon size={14} /> Photos ({photos.length})
-        </button>
-        <button onClick={() => setTab('ai')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'ai' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
-          <Sparkles size={14} /> AI
-        </button>
-      </div>
+      {!isPrintAllMode && (
+        <div className="flex border-b border-gray-300 bg-white sticky top-[60px] z-10 shadow-sm print:hidden">
+          <button onClick={() => setTab('info')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'info' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
+            <Info size={14} /> Info
+          </button>
+          <button onClick={() => setTab('photos')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'photos' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
+            <ImageIcon size={14} /> Photos ({photos.length})
+          </button>
+          <button onClick={() => setTab('ai')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'ai' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
+            <Sparkles size={14} /> AI
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:p-8">
         <div className="max-w-4xl mx-auto">
@@ -194,6 +209,7 @@ Partagé via BlueVault.`;
                 <div><span className="text-gray-400 block text-xs">Précocité</span><span className="font-medium">{variety.precocity || '-'}</span></div>
                 <div><span className="text-gray-400 block text-xs">Vigueur</span><span className="font-medium">{variety.vigor || '-'}</span></div>
                 <div><span className="text-gray-400 block text-xs">Port</span><span className="font-medium">{variety.habit || '-'}</span></div>
+                <div><span className="text-gray-400 block text-xs">Zone de rusticité</span><span className="font-medium">{variety.hardiness_zone || '-'}</span></div>
                 <div><span className="text-gray-400 block text-xs">Rendement est.</span><span className="font-medium">{variety.yield_estimate ? `${variety.yield_estimate} kg/pl` : '-'}</span></div>
               </div>
             </div>
@@ -212,6 +228,22 @@ Partagé via BlueVault.`;
                 <div className="col-span-2"><span className="text-gray-400 block text-xs">Sensibilités</span><span className="font-medium">{variety.sensitivities || '-'}</span></div>
               </div>
             </div>
+
+            {hasSensoryData && (
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Profil Sensoriel</h3>
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={sensoryData}>
+                      <PolarGrid stroke="#e5e7eb" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                      <Radar name={variety.name} dataKey="A" stroke="#00FF9D" fill="#00FF9D" fillOpacity={0.4} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
             {variety.free_notes && (
               <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">

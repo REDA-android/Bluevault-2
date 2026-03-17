@@ -12,7 +12,9 @@ const ALL_FIELDS = [
   'name', 'species', 'breeder', 'site', 'flowering_date', 'maturity_date',
   'precocity', 'fruit_size', 'color', 'bloom', 'fruit_shape', 'brix',
   'firmness', 'acidity', 'aroma', 'vigor', 'habit', 'yield_estimate',
-  'sensitivities', 'free_notes', 'ai_analysis'
+  'sensitivities', 'free_notes', 'ai_analysis',
+  'harvest_start', 'harvest_end', 'status', 'rating', 'hardiness_zone',
+  'sweetness_score', 'acidity_score', 'firmness_score', 'size_score', 'aroma_score'
 ];
 
 export default function ExportModal({ varieties, onClose }: ExportModalProps) {
