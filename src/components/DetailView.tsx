@@ -42,9 +42,9 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
       });
       
       setPhotoSummary(response.text?.trim() || null);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setPhotoSummary("Erreur lors de la génération du résumé.");
+      setPhotoSummary("Erreur lors de la génération du résumé : " + (e.message || "Erreur inconnue"));
     } finally {
       setGeneratingPhotoSummary(false);
     }
@@ -159,7 +159,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
             {!analysis ? (
               <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200 flex flex-col items-center">
                 <Sparkles size={32} className="text-gray-300 mb-4" />
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Analyse IA non disponible</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Aucune analyse IA</h3>
                 <p className="text-sm text-gray-500 mb-6">Générez une analyse complète basée sur les données et photos de cette variété.</p>
                 <button onClick={onAnalyze} disabled={analyzing} className="flex items-center gap-2 px-6 py-3 bg-[#151619] hover:bg-[#2A2B30] text-[#00FF9D] font-mono text-sm uppercase tracking-widest rounded-lg transition-colors disabled:opacity-50">
                   {analyzing ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}

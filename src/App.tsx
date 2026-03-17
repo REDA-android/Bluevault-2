@@ -128,13 +128,20 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
       });
 
       const analysisStr = response.text || "{}";
-      await handleSave({ ...variety, ai_analysis: analysisStr });
+      const updatedVariety = { ...variety, ai_analysis: analysisStr };
+      
+      // Update in local storage directly without redirecting
+      setVarieties(prev => {
+        const newVarieties = prev.map(v => v.id === variety.id ? updatedVariety : v);
+        localStorage.setItem('bluevault_varieties', JSON.stringify(newVarieties));
+        return newVarieties;
+      });
       
       // Update local state for immediate feedback
-      setSelectedVariety(prev => prev ? { ...prev, ai_analysis: analysisStr } : null);
-    } catch (e) {
+      setSelectedVariety(updatedVariety);
+    } catch (e: any) {
       console.error("Analysis error:", e);
-      alert("Erreur lors de l'analyse IA.");
+      alert("Erreur lors de l'analyse IA : " + (e.message || "Erreur inconnue"));
     } finally {
       setAnalyzing(false);
     }
