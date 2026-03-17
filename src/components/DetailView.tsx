@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Variety, Photo } from '../types';
-import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera } from 'lucide-react';
+import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer } from 'lucide-react';
 import { getAI } from '../utils';
 import PhotoGallery from './PhotoGallery';
 import AIComparison from './AIComparison';
@@ -53,9 +53,9 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
   const renderProgressBar = (score: number, max: number = 10) => {
     const percentage = Math.min(100, Math.max(0, (score / max) * 100));
     return (
-      <div className="w-full bg-[#2A2B30] rounded-full h-2 mt-2 overflow-hidden">
+      <div className="w-full bg-[#2A2B30] rounded-full h-2 mt-2 overflow-hidden print:border print:border-gray-300">
         <div 
-          className="bg-[#00FF9D] h-2 rounded-full transition-all duration-1000 ease-out" 
+          className="bg-[#00FF9D] h-2 rounded-full transition-all duration-1000 ease-out print:bg-black" 
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -63,8 +63,8 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#E6E6E6] text-[#151619]">
-      <div className="bg-[#151619] text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md">
+    <div className="flex flex-col h-full bg-[#E6E6E6] text-[#151619] print:bg-white print:h-auto">
+      <div className="bg-[#151619] text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md print:hidden">
         <button onClick={onBack} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors"><ArrowLeft size={20} /></button>
         <div className="relative group flex items-center justify-center">
           <h2 className="font-mono text-sm uppercase tracking-widest truncate max-w-[200px] cursor-help">{variety.name}</h2>
@@ -72,10 +72,20 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
             {variety.ai_analysis ? 'Analyse IA disponible' : 'Analyse IA non générée'}
           </div>
         </div>
-        <button onClick={onEdit} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-[#00FF9D]"><Edit3 size={20} /></button>
+        <div className="flex gap-2">
+          <button onClick={() => window.print()} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Imprimer le Passeport Variétal">
+            <Printer size={20} />
+          </button>
+          <button onClick={onEdit} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-[#00FF9D]"><Edit3 size={20} /></button>
+        </div>
       </div>
 
-      <div className="flex border-b border-gray-300 bg-white sticky top-[60px] z-10 shadow-sm">
+      <div className="hidden print:block p-8 pb-4 border-b-4 border-black mb-6">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">{variety.name}</h1>
+        <p className="text-lg text-gray-500 uppercase tracking-widest">{variety.species || 'Espèce inconnue'}</p>
+      </div>
+
+      <div className="flex border-b border-gray-300 bg-white sticky top-[60px] z-10 shadow-sm print:hidden">
         <button onClick={() => setTab('info')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${tab === 'info' ? 'text-[#00CC7D] border-b-2 border-[#00CC7D]' : 'text-gray-500 hover:text-gray-800'}`}>
           <Info size={14} /> Info
         </button>
@@ -87,10 +97,10 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {tab === 'info' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+      <div className="flex-1 overflow-y-auto p-4 print:overflow-visible print:p-8">
+        {(tab === 'info' || document.body.classList.contains('print-mode')) && (
+          <div className={`space-y-6 ${tab !== 'info' ? 'hidden print:block' : ''}`}>
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Identité & Localisation</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
                 <div><span className="text-gray-400 block text-xs">Espèce</span><span className="font-medium">{variety.species || '-'}</span></div>
@@ -103,7 +113,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
                       href={`https://www.google.com/maps/search/?api=1&query=${firstPhotoWithGPS.exif!.lat},${firstPhotoWithGPS.exif!.lng}`} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="text-[#00CC7D] flex items-center gap-1 text-xs hover:underline mt-1 w-max"
+                      className="text-[#00CC7D] flex items-center gap-1 text-xs hover:underline mt-1 w-max print:hidden"
                     >
                       <MapPin size={12} /> Voir sur la carte (GPS)
                     </a>
@@ -112,7 +122,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Phénologie & Plante</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
                 <div><span className="text-gray-400 block text-xs">Floraison</span><span className="font-medium">{variety.flowering_date ? new Date(variety.flowering_date).toLocaleDateString() : '-'}</span></div>
@@ -124,7 +134,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Fruit & Qualité</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
                 <div><span className="text-gray-400 block text-xs">Calibre</span><span className="font-medium">{variety.fruit_size ? `${variety.fruit_size} mm` : '-'}</span></div>
@@ -140,7 +150,7 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
             </div>
 
             {variety.free_notes && (
-              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+              <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Notes Libres</h3>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{variety.free_notes}</p>
               </div>
@@ -148,16 +158,17 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
           </div>
         )}
 
-        {tab === 'photos' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[300px]">
+        {(tab === 'photos' || document.body.classList.contains('print-mode')) && (
+          <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[300px] print:shadow-none print:border-none print:min-h-0 print:mb-6 ${tab !== 'photos' ? 'hidden print:block' : ''}`}>
+            <h3 className="hidden print:block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Photos</h3>
             <PhotoGallery photos={photos} />
           </div>
         )}
 
-        {tab === 'ai' && (
-          <div className="space-y-6">
+        {(tab === 'ai' || document.body.classList.contains('print-mode')) && (
+          <div className={`space-y-6 ${tab !== 'ai' ? 'hidden print:block' : ''}`}>
             {!analysis ? (
-              <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200 flex flex-col items-center">
+              <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200 flex flex-col items-center print:hidden">
                 <Sparkles size={32} className="text-gray-300 mb-4" />
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Aucune analyse IA</h3>
                 <p className="text-sm text-gray-500 mb-6">Générez une analyse complète basée sur les données et photos de cette variété.</p>
@@ -168,10 +179,10 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
               </div>
             ) : (
               <>
-                <div className="bg-[#151619] text-white rounded-xl p-5 shadow-xl border border-[#2A2B30]">
-                  <div className="flex items-center justify-between mb-4 border-b border-[#2A2B30] pb-2">
-                    <h3 className="text-xs font-mono text-[#00FF9D] uppercase tracking-widest flex items-center gap-2"><Sparkles size={14} /> Synthèse IA</h3>
-                    <button onClick={onAnalyze} disabled={analyzing} className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                <div className="bg-[#151619] text-white rounded-xl p-5 shadow-xl border border-[#2A2B30] print:bg-white print:text-black print:border-gray-300 print:shadow-none print:mb-6">
+                  <div className="flex items-center justify-between mb-4 border-b border-[#2A2B30] pb-2 print:border-gray-200">
+                    <h3 className="text-xs font-mono text-[#00FF9D] uppercase tracking-widest flex items-center gap-2 print:text-black"><Sparkles size={14} /> Synthèse IA</h3>
+                    <button onClick={onAnalyze} disabled={analyzing} className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1 print:hidden">
                       {analyzing ? <Loader2 size={12} className="animate-spin" /> : <Activity size={12} />}
                       Actualiser
                     </button>
@@ -179,40 +190,40 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
                   
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30]">
+                      <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30] print:bg-gray-50 print:border-gray-200">
                         <div className="flex justify-between items-end mb-1">
                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Agronomique</span>
-                          <span className="text-xl font-bold text-[#00FF9D]">{analysis.scores?.agronomique || 0}<span className="text-xs text-gray-500">/10</span></span>
+                          <span className="text-xl font-bold text-[#00FF9D] print:text-black">{analysis.scores?.agronomique || 0}<span className="text-xs text-gray-500">/10</span></span>
                         </div>
                         {renderProgressBar(analysis.scores?.agronomique || 0)}
                       </div>
-                      <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30]">
+                      <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30] print:bg-gray-50 print:border-gray-200">
                         <div className="flex justify-between items-end mb-1">
                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Organoleptique</span>
-                          <span className="text-xl font-bold text-[#00FF9D]">{analysis.scores?.organoleptique || 0}<span className="text-xs text-gray-500">/10</span></span>
+                          <span className="text-xl font-bold text-[#00FF9D] print:text-black">{analysis.scores?.organoleptique || 0}<span className="text-xs text-gray-500">/10</span></span>
                         </div>
                         {renderProgressBar(analysis.scores?.organoleptique || 0)}
                       </div>
                     </div>
 
-                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30]">
+                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30] print:bg-gray-50 print:border-gray-200">
                       <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">Points Forts</h4>
                       <ul className="space-y-2">
                         {analysis.synthese?.points_forts?.map((p: string, i: number) => (
-                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
-                            <span className="text-[#00FF9D] mt-0.5">✓</span> 
+                          <li key={i} className="text-sm text-gray-300 print:text-gray-800 flex items-start gap-2">
+                            <span className="text-[#00FF9D] print:text-black mt-0.5">✓</span> 
                             <span>{p}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
 
-                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30]">
+                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-[#2A2B30] print:bg-gray-50 print:border-gray-200">
                       <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3">Points Faibles</h4>
                       <ul className="space-y-2">
                         {analysis.synthese?.points_faibles?.map((p: string, i: number) => (
-                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
-                            <span className="text-[#FF4444] mt-0.5">✗</span> 
+                          <li key={i} className="text-sm text-gray-300 print:text-gray-800 flex items-start gap-2">
+                            <span className="text-[#FF4444] print:text-black mt-0.5">✗</span> 
                             <span>{p}</span>
                           </li>
                         ))}
@@ -221,14 +232,16 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
                   </div>
                 </div>
 
-                <AIComparison variety={variety} allVarieties={allVarieties} />
+                <div className="print:hidden">
+                  <AIComparison variety={variety} allVarieties={allVarieties} />
+                </div>
                 
                 {photos.length > 0 && (
-                  <div className="bg-[#151619] text-white rounded-xl p-5 shadow-xl border border-[#2A2B30] mt-6">
-                    <div className="flex items-center justify-between mb-4 border-b border-[#2A2B30] pb-2">
-                      <h3 className="text-xs font-mono text-[#00FF9D] uppercase tracking-widest flex items-center gap-2"><Camera size={14} /> Analyse Visuelle</h3>
+                  <div className="bg-[#151619] text-white rounded-xl p-5 shadow-xl border border-[#2A2B30] mt-6 print:bg-white print:text-black print:border-gray-300 print:shadow-none">
+                    <div className="flex items-center justify-between mb-4 border-b border-[#2A2B30] pb-2 print:border-gray-200">
+                      <h3 className="text-xs font-mono text-[#00FF9D] uppercase tracking-widest flex items-center gap-2 print:text-black"><Camera size={14} /> Analyse Visuelle</h3>
                       {!photoSummary && (
-                        <button onClick={handleGeneratePhotoSummary} disabled={generatingPhotoSummary} className="text-xs text-[#00CC7D] hover:text-[#00FF9D] transition-colors flex items-center gap-1 disabled:opacity-50">
+                        <button onClick={handleGeneratePhotoSummary} disabled={generatingPhotoSummary} className="text-xs text-[#00CC7D] hover:text-[#00FF9D] transition-colors flex items-center gap-1 disabled:opacity-50 print:hidden">
                           {generatingPhotoSummary ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                           Générer
                         </button>
@@ -236,9 +249,9 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
                     </div>
                     
                     {photoSummary ? (
-                      <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{photoSummary}</p>
+                      <p className="text-sm text-gray-300 print:text-gray-800 leading-relaxed whitespace-pre-wrap">{photoSummary}</p>
                     ) : (
-                      <p className="text-sm text-gray-500 italic">Générez un résumé des caractéristiques visuelles à partir des photos téléchargées.</p>
+                      <p className="text-sm text-gray-500 italic print:hidden">Générez un résumé des caractéristiques visuelles à partir des photos téléchargées.</p>
                     )}
                   </div>
                 )}

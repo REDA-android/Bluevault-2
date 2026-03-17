@@ -8,17 +8,26 @@ import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
 import Dashboard from './components/Dashboard';
 import ComparisonView from './components/ComparisonView';
-import { LayoutDashboard, GitCompare } from 'lucide-react';
+import MapView from './components/MapView';
+import { LayoutDashboard, GitCompare, MapPin, SlidersHorizontal } from 'lucide-react';
 
 export default function App() {
   const [varieties, setVarieties] = useState<Variety[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'home' | 'form' | 'detail' | 'dashboard' | 'compare'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'detail' | 'dashboard' | 'compare' | 'map'>('home');
   const [selectedVariety, setSelectedVariety] = useState<Variety | null>(null);
   const [compareVarieties, setCompareVarieties] = useState<Variety[]>([]);
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [search, setSearch] = useState('');
   const [filterSpecies, setFilterSpecies] = useState<string>('all');
+  
+  // Advanced Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [minBrix, setMinBrix] = useState<string>('');
+  const [maxBrix, setMaxBrix] = useState<string>('');
+  const [minYield, setMinYield] = useState<string>('');
+  const [maxYield, setMaxYield] = useState<string>('');
+
   const [sortConfig, setSortConfig] = useState<{ field: string, direction: 'asc' | 'desc' }[]>([
     { field: 'updatedAt', direction: 'desc' }
   ]);
@@ -27,7 +36,7 @@ export default function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const ITEMS_PER_PAGE = 10;
 
-  useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig]);
+  useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig, minBrix, maxBrix, minYield, maxYield]);
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -181,13 +190,8 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     setSortConfig(prev => {
       const existing = prev.find(s => s.field === field);
       if (existing) {
-        // Toggle direction or remove if it was the only one and we want to reset? 
-        // Let's just toggle.
         return [{ field, direction: existing.direction === 'asc' ? 'desc' : 'asc' }];
       }
-      // For multi-sort, we could append, but usually users expect a primary sort change.
-      // The request says "e.g., sort by species then by name". 
-      // I'll implement a logic where clicking a new field makes it primary, and 'name' is always a secondary fallback.
       return [{ field, direction: 'asc' }, { field: 'name', direction: 'asc' }];
     });
   };
@@ -198,7 +202,17 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     .filter(v => {
       const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase());
       const matchesSpecies = filterSpecies === 'all' || v.species === filterSpecies;
-      return matchesSearch && matchesSpecies;
+      
+      // Advanced Filters
+      const vBrix = v.brix !== undefined ? Number(v.brix) : null;
+      const vYield = v.yield_estimate !== undefined ? Number(v.yield_estimate) : null;
+      
+      const matchesMinBrix = minBrix === '' || (vBrix !== null && vBrix >= Number(minBrix));
+      const matchesMaxBrix = maxBrix === '' || (vBrix !== null && vBrix <= Number(maxBrix));
+      const matchesMinYield = minYield === '' || (vYield !== null && vYield >= Number(minYield));
+      const matchesMaxYield = maxYield === '' || (vYield !== null && vYield <= Number(maxYield));
+
+      return matchesSearch && matchesSpecies && matchesMinBrix && matchesMaxBrix && matchesMinYield && matchesMaxYield;
     });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -226,12 +240,12 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
   const paginated = sorted.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="min-h-screen bg-[#E6E6E6] text-[#151619] flex justify-center">
-      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#E6E6E6] text-[#151619] flex justify-center print:bg-white">
+      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col relative overflow-hidden print:max-w-none print:shadow-none print:w-full">
         
         {view === 'home' && (
           <>
-            <div className="bg-[#151619] text-white p-6 pb-8 rounded-b-3xl shadow-lg relative z-10">
+            <div className="bg-[#151619] text-white p-6 pb-8 rounded-b-3xl shadow-lg relative z-10 print:hidden">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#00FF9D]/20 rounded-xl flex items-center justify-center border border-[#00FF9D]/30">
@@ -243,10 +257,13 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setView('dashboard')} className="p-2 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors">
+                  <button onClick={() => setView('map')} className="p-2 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Carte">
+                    <MapPin size={18} />
+                  </button>
+                  <button onClick={() => setView('dashboard')} className="p-2 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Tableau de bord">
                     <LayoutDashboard size={18} />
                   </button>
-                  <button onClick={() => setIsCompareMode(!isCompareMode)} className={`p-2 rounded-xl flex items-center justify-center transition-colors ${isCompareMode ? 'bg-[#00FF9D] text-black' : 'bg-[#2A2B30] text-white hover:bg-[#3A3B40]'}`}>
+                  <button onClick={() => setIsCompareMode(!isCompareMode)} className={`p-2 rounded-xl flex items-center justify-center transition-colors ${isCompareMode ? 'bg-[#00FF9D] text-black' : 'bg-[#2A2B30] text-white hover:bg-[#3A3B40]'}`} title="Comparer">
                     <GitCompare size={18} />
                   </button>
                 </div>
@@ -277,7 +294,7 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
               </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto bg-[#f5f5f5]">
+            <div className="flex-1 p-4 overflow-y-auto bg-[#f5f5f5] print:hidden">
               {isCompareMode && (
                 <div className="mb-4 bg-[#151619] text-white p-4 rounded-2xl shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-top-4">
                   <div className="text-xs">
@@ -294,16 +311,46 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
               )}
 
               <div className="mb-6">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Rechercher..." 
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-1 focus:ring-[#00FF9D] shadow-sm"
-                  />
+                <div className="flex gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="Rechercher..." 
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-1 focus:ring-[#00FF9D] shadow-sm"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`px-4 rounded-xl flex items-center justify-center transition-colors border ${showFilters ? 'bg-[#151619] text-[#00FF9D] border-[#151619]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <SlidersHorizontal size={18} />
+                  </button>
                 </div>
+
+                {showFilters && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Filtres Avancés</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Brix (°Bx)</label>
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="Min" value={minBrix} onChange={e => setMinBrix(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                          <input type="number" placeholder="Max" value={maxBrix} onChange={e => setMaxBrix(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Rendement (kg)</label>
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="Min" value={minYield} onChange={e => setMinYield(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                          <input type="number" placeholder="Max" value={maxYield} onChange={e => setMaxYield(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-4">
                   <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -450,6 +497,10 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
 
         {view === 'compare' && compareVarieties.length === 2 && (
           <ComparisonView v1={compareVarieties[0]} v2={compareVarieties[1]} onClose={() => setView('home')} />
+        )}
+
+        {view === 'map' && (
+          <MapView varieties={varieties} onClose={() => setView('home')} />
         )}
 
         {showExport && (
