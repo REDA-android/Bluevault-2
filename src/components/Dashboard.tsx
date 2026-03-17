@@ -49,6 +49,22 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
       }));
   }, [varieties]);
 
+  // 4. Harvest Timeline Data
+  const harvestData = useMemo(() => {
+    return varieties
+      .filter(v => v.harvest_start && v.harvest_end)
+      .map(v => ({
+        name: v.name,
+        start: v.harvest_start!,
+        end: v.harvest_end!,
+        // Handle wrap-around (e.g. Dec to Feb)
+        isWrap: v.harvest_end! < v.harvest_start!
+      }))
+      .sort((a, b) => a.start - b.start);
+  }, [varieties]);
+
+  const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+
   const generateAISummary = async () => {
     if (varieties.length === 0) return;
     setLoadingAI(true);
@@ -57,12 +73,15 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
         name: v.name,
         brix: v.brix,
         yield: v.yield_estimate,
-        species: v.species
+        species: v.species,
+        rating: v.rating,
+        status: v.status
       }));
       
       const prompt = `Analyse cette collection de ${varieties.length} variétés de myrtilles. 
       Données: ${JSON.stringify(summaryData.slice(0, 20))}
       Fais une synthèse rapide (3-4 phrases) des points forts de la collection (ex: "Collection riche en variétés à haut Brix", "Dominance de l'espèce X"). 
+      Mentionne les variétés les mieux notées si possible.
       Sois professionnel et technique.`;
 
       const response = await getAI().models.generateContent({
@@ -173,9 +192,9 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
           </div>
 
           {/* Brix vs Yield Scatter */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 md:col-span-2">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
             <div className="flex items-center gap-2 mb-4">
-              <Activity className="text-orange-500" size={18} />
+              <Activity className="text-blue-500" size={18} />
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Corrélation Brix vs Rendement</h3>
             </div>
             <div className="h-64">
@@ -189,6 +208,55 @@ export default function Dashboard({ varieties, onClose }: DashboardProps) {
                   <Scatter name="Variétés" data={scatterData} fill="#00FF9D" />
                 </ScatterChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Harvest Timeline */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="text-orange-500" size={18} />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Calendrier de Récolte</h3>
+            </div>
+            <div className="space-y-3 overflow-y-auto max-h-64 pr-2 custom-scrollbar">
+              {harvestData.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-[80px_1fr] gap-2 mb-1">
+                    <div className="text-[8px] font-bold text-gray-400 uppercase">Variété</div>
+                    <div className="flex justify-between px-1">
+                      {months.map((m, i) => (
+                        <span key={i} className="text-[8px] font-bold text-gray-400 w-full text-center">{m}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {harvestData.map((h, i) => (
+                    <div key={i} className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                      <div className="text-[10px] font-bold truncate text-gray-700">{h.name}</div>
+                      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                        {Array.from({ length: 12 }).map((_, mi) => {
+                          const monthNum = mi + 1;
+                          let isActive = false;
+                          if (h.isWrap) {
+                            isActive = monthNum >= h.start || monthNum <= h.end;
+                          } else {
+                            isActive = monthNum >= h.start && monthNum <= h.end;
+                          }
+                          return (
+                            <div 
+                              key={mi} 
+                              className={`h-full flex-1 ${isActive ? 'bg-[#00FF9D]' : 'bg-transparent'}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+                  <Activity size={32} className="opacity-20 mb-2" />
+                  <p className="text-xs">Aucune donnée de récolte</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

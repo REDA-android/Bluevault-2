@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Variety, Photo } from '../types';
 import { extractExif, reverseGeocode, toBase64, getAI } from '../utils';
-import { Camera, X, Check, Trash2, Sparkles, Loader2, MapPin, HelpCircle, Save, Info } from 'lucide-react';
+import { Camera, X, Check, Trash2, Sparkles, Loader2, MapPin, HelpCircle, Star, Save, Info } from 'lucide-react';
 
 const TooltipLabel = ({ label, tooltip }: { label: string, tooltip: string }) => (
   <div className="flex items-center gap-1 mb-1 relative group">
@@ -13,6 +13,23 @@ const TooltipLabel = ({ label, tooltip }: { label: string, tooltip: string }) =>
     </div>
   </div>
 );
+
+const StarRating = ({ value, onChange }: { value: number, onChange: (val: number) => void }) => {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star)}
+          className={`transition-colors ${star <= value ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-200'}`}
+        >
+          <Star size={20} fill={star <= value ? 'currentColor' : 'none'} />
+        </button>
+      ))}
+    </div>
+  );
+};
 
 interface FormViewProps {
   initialData?: Variety | null;
@@ -305,6 +322,47 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
                 </button>
               </div>
               <input name="sensitivities" value={formData.sensitivities || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Botrytis, Rouille..." />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Gestion & Évaluation</h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Statut</label>
+                <select name="status" value={formData.status || 'active'} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]">
+                  <option value="active">Actif (Production)</option>
+                  <option value="trial">En Essai</option>
+                  <option value="archived">Archivé</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Note globale</label>
+                <StarRating value={formData.rating || 0} onChange={(val) => setFormData(prev => ({ ...prev, rating: val }))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Début de récolte</label>
+                <select name="harvest_start" value={formData.harvest_start || ''} onChange={(e) => setFormData(prev => ({ ...prev, harvest_start: parseInt(e.target.value) }))} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]">
+                  <option value="">Sélectionner...</option>
+                  {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Fin de récolte</label>
+                <select name="harvest_end" value={formData.harvest_end || ''} onChange={(e) => setFormData(prev => ({ ...prev, harvest_end: parseInt(e.target.value) }))} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]">
+                  <option value="">Sélectionner...</option>
+                  {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

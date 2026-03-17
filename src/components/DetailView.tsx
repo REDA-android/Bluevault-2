@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Variety, Photo } from '../types';
-import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer } from 'lucide-react';
+import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer, Star, Share2 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { getAI } from '../utils';
 import PhotoGallery from './PhotoGallery';
 import AIComparison from './AIComparison';
@@ -50,6 +51,19 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
     }
   };
 
+  const handleShare = () => {
+    const text = `Variété: ${variety.name}
+Espèce: ${variety.species || 'N/C'}
+Brix: ${variety.brix || 'N/C'}°Bx
+Rendement: ${variety.yield_estimate || 'N/C'}kg/pl
+Note: ${variety.rating || 0}/5
+Statut: ${variety.status || 'N/C'}
+    
+Partagé via BlueVault.`;
+    navigator.clipboard.writeText(text);
+    alert("Résumé copié dans le presse-papier !");
+  };
+
   const renderProgressBar = (score: number, max: number = 10) => {
     const percentage = Math.min(100, Math.max(0, (score / max) * 100));
     return (
@@ -73,6 +87,9 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
           </div>
         </div>
         <div className="flex gap-2">
+          <button onClick={handleShare} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Partager le résumé">
+            <Share2 size={20} />
+          </button>
           <button onClick={() => window.print()} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors text-white" title="Imprimer le Passeport Variétal">
             <Printer size={20} />
           </button>
@@ -80,9 +97,20 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
         </div>
       </div>
 
-      <div className="hidden print:block p-8 pb-4 border-b-4 border-black mb-6">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">{variety.name}</h1>
-        <p className="text-lg text-gray-500 uppercase tracking-widest">{variety.species || 'Espèce inconnue'}</p>
+      <div className="hidden print:flex p-8 pb-4 border-b-4 border-black mb-6 justify-between items-end">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{variety.name}</h1>
+          <p className="text-lg text-gray-500 uppercase tracking-widest">{variety.species || 'Espèce inconnue'}</p>
+          <div className="flex gap-1 mt-2">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star key={s} size={16} fill={s <= (variety.rating || 0) ? '#000' : 'none'} className="text-black" />
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <QRCodeCanvas value={window.location.href} size={80} bgColor="#ffffff" fgColor="#000000" level="H" />
+          <span className="text-[8px] font-mono text-gray-400 uppercase">BlueVault Passport</span>
+        </div>
       </div>
 
       <div className="flex border-b border-gray-300 bg-white sticky top-[60px] z-10 shadow-sm print:hidden">
@@ -101,6 +129,41 @@ export default function DetailView({ variety, allVarieties, onBack, onEdit, onAn
         <div className="max-w-4xl mx-auto">
         {(tab === 'info' || document.body.classList.contains('print-mode')) && (
           <div className={`space-y-6 ${tab !== 'info' ? 'hidden print:block' : ''}`}>
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
+              <div className="flex justify-between items-start mb-4 border-b pb-2">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gestion & Évaluation</h3>
+                <div className="flex items-center gap-1">
+                  {variety.status && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      variety.status === 'active' ? 'bg-green-100 text-green-700' : 
+                      variety.status === 'trial' ? 'bg-blue-100 text-blue-700' : 
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {variety.status === 'active' ? 'Actif' : variety.status === 'trial' ? 'En Essai' : 'Archivé'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400 block text-xs mb-1">Note globale</span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={14} fill={s <= (variety.rating || 0) ? '#FACC15' : 'none'} className={s <= (variety.rating || 0) ? 'text-yellow-400' : 'text-gray-200'} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs mb-1">Période de récolte</span>
+                  <span className="font-medium">
+                    {variety.harvest_start && variety.harvest_end ? (
+                      `${['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'][variety.harvest_start-1]} - ${['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'][variety.harvest_end-1]}`
+                    ) : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Identité & Localisation</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">

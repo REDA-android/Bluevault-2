@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Variety } from './types';
 import { getAI } from './utils';
 import { Type, ThinkingLevel } from '@google/genai';
-import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check, X, Star } from 'lucide-react';
 import FormView from './components/FormView';
 import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
@@ -34,6 +34,9 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showExport, setShowExport] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [magicFilter, setMagicFilter] = useState<string[] | null>(null);
+  const [isMagicSearching, setIsMagicSearching] = useState(false);
+  const [magicQuery, setMagicQuery] = useState('');
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig, minBrix, maxBrix, minYield, maxYield]);
@@ -196,12 +199,44 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     });
   };
 
+  const handleMagicSearch = async () => {
+    if (!magicQuery.trim()) return;
+    setIsMagicSearching(true);
+    try {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Voici une liste de variétés de bleuets: ${JSON.stringify(varieties.map(v => ({ id: v.id, name: v.name, species: v.species, brix: v.brix, yield: v.yield_estimate })))}.
+        
+        L'utilisateur recherche: "${magicQuery}".
+        
+        Retourne UNIQUEMENT un tableau JSON des IDs des variétés qui correspondent le mieux à cette recherche.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          }
+        }
+      });
+      
+      const ids = JSON.parse(response.text || "[]");
+      setMagicFilter(ids);
+    } catch (e) {
+      console.error("Magic Search error:", e);
+      alert("Erreur lors de la recherche magique.");
+    } finally {
+      setIsMagicSearching(false);
+    }
+  };
+
   const speciesList = Array.from(new Set(varieties.map(v => v.species).filter(Boolean))) as string[];
 
   const filtered = varieties
     .filter(v => {
       const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase());
       const matchesSpecies = filterSpecies === 'all' || v.species === filterSpecies;
+      const matchesMagic = !magicFilter || magicFilter.includes(v.id);
       
       // Advanced Filters
       const vBrix = v.brix !== undefined ? Number(v.brix) : null;
@@ -212,7 +247,7 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
       const matchesMinYield = minYield === '' || (vYield !== null && vYield >= Number(minYield));
       const matchesMaxYield = maxYield === '' || (vYield !== null && vYield <= Number(maxYield));
 
-      return matchesSearch && matchesSpecies && matchesMinBrix && matchesMaxBrix && matchesMinYield && matchesMaxYield;
+      return matchesSearch && matchesSpecies && matchesMagic && matchesMinBrix && matchesMaxBrix && matchesMinYield && matchesMaxYield;
     });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -316,11 +351,36 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input 
                       type="text" 
-                      placeholder="Rechercher une variété..." 
+                      placeholder="Rechercher..." 
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-2 focus:ring-[#00FF9D]/20 transition-all"
                     />
+                  </div>
+                  <div className="relative flex-1">
+                    <Sparkles className={`absolute left-4 top-1/2 -translate-y-1/2 ${magicFilter ? 'text-[#00FF9D]' : 'text-gray-400'}`} size={20} />
+                    <input 
+                      type="text" 
+                      placeholder="Recherche magique (IA)..." 
+                      value={magicQuery}
+                      onChange={(e) => setMagicQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleMagicSearch()}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-24 py-3.5 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-2 focus:ring-[#00FF9D]/20 transition-all"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {magicFilter && (
+                        <button onClick={() => { setMagicFilter(null); setMagicQuery(''); }} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                          <X size={16} />
+                        </button>
+                      )}
+                      <button 
+                        onClick={handleMagicSearch}
+                        disabled={isMagicSearching}
+                        className="bg-[#151619] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#2A2B30] transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isMagicSearching ? <Loader2 size={12} className="animate-spin" /> : 'Filtrer'}
+                      </button>
+                    </div>
                   </div>
                   <button 
                     onClick={() => setShowFilters(!showFilters)}
@@ -419,8 +479,28 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#00CC7D] transition-colors">{v.name}</h3>
-                          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">{v.species || 'Espèce inconnue'}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#00CC7D] transition-colors">{v.name}</h3>
+                            {v.status && (
+                              <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                v.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                v.status === 'trial' ? 'bg-blue-100 text-blue-700' : 
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {v.status === 'active' ? 'Actif' : v.status === 'trial' ? 'Essai' : 'Arch.'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider">{v.species || 'Espèce inconnue'}</p>
+                            {v.rating && (
+                              <div className="flex gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star key={s} size={10} fill={s <= v.rating! ? '#FACC15' : 'none'} className={s <= v.rating! ? 'text-yellow-400' : 'text-gray-200'} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {isCompareMode && (
                           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isSelectedForCompare ? 'bg-[#00FF9D] border-[#00FF9D]' : 'border-gray-300'}`}>

@@ -44,6 +44,10 @@ export interface Variety {
   vigor?: string;
   habit?: string;
   yield_estimate?: number;
+  harvest_start?: number; // Month 1-12
+  harvest_end?: number;   // Month 1-12
+  status?: 'active' | 'trial' | 'archived';
+  rating?: number; // 1-5
   sensitivities?: string;
   free_notes?: string;
   photos?: string; // JSON string of Photo[]
