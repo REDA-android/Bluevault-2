@@ -139,10 +139,9 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
       parts.push({ text: prompt });
 
       const response = await getAI().models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: { parts },
         config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,

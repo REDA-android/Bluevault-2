@@ -46,10 +46,9 @@ ${targetVarieties.map(v => JSON.stringify({ name: v.name, analysis: JSON.parse(v
 Fournis une comparaison structurée mettant en évidence les similitudes et les différences clés.`;
 
       const response = await getAI().models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
