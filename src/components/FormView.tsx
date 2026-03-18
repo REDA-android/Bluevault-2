@@ -215,13 +215,122 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
                 <input name="species" value={formData.species || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="V. corymbosum" />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nom scientifique</label>
+                <input name="scientific_name" value={formData.scientific_name || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Vaccinium corymbosum L." />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Code expérimental</label>
+                <input name="experimental_code" value={formData.experimental_code || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: US-123" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Synonymes</label>
+                <input name="synonyms" value={formData.synonyms || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Noms alternatifs" />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Obtenteur</label>
                 <input name="breeder" value={formData.breeder || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Pays d'origine</label>
+                <input name="origin_country" value={formData.origin_country || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Statut légal (COV / Inscription)</label>
+                <input name="legal_status" value={formData.legal_status || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Inscription 2015, COV n°..." />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1"><MapPin size={12}/> Site / Localisation</label>
               <input name="site" value={formData.site || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Parcelle A, ou auto-rempli via GPS" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Morphologie Détaillée</h3>
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-3">Tige & Rameaux</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur</label>
+                  <input name="stem_color" value={formData.stem_color || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Épaisseur</label>
+                  <input name="stem_thickness" value={formData.stem_thickness || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Entre-nœuds</label>
+                  <input name="stem_internode_length" value={formData.stem_internode_length || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Pilosité</label>
+                  <input name="stem_hairiness" value={formData.stem_hairiness || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-3">Feuillage</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Forme du limbe</label>
+                  <input name="leaf_blade_shape" value={formData.leaf_blade_shape || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Type de marge</label>
+                  <input name="leaf_margin_type" value={formData.leaf_margin_type || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Cloqûre / Texture</label>
+                  <input name="leaf_blistering" value={formData.leaf_blistering || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-3">Floraison</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur pétales</label>
+                  <input name="flower_petal_color" value={formData.flower_petal_color || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Pleine floraison</label>
+                  <input name="flower_full_bloom_time" value={formData.flower_full_bloom_time || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Type d'inflorescence</label>
+                  <input name="flower_inflorescence_type" value={formData.flower_inflorescence_type || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-3">Organe Récolté (Fruit)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Forme</label>
+                  <input name="harvest_organ_shape" value={formData.harvest_organ_shape || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Calibre / Poids</label>
+                  <input name="harvest_organ_size" value={formData.harvest_organ_size || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur épiderme</label>
+                  <input name="harvest_organ_skin_color" value={formData.harvest_organ_skin_color || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Couleur chair</label>
+                  <input name="harvest_organ_flesh_color" value={formData.harvest_organ_flesh_color || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Texture</label>
+                  <input name="harvest_organ_texture" value={formData.harvest_organ_texture || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -319,13 +428,23 @@ export default function FormView({ initialData, onSave, onCancel, onDelete }: Fo
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-gray-600">Sensibilités</label>
+                <label className="block text-xs font-semibold text-gray-600">Sensibilités & Résistances Biotiques</label>
                 <button type="button" onClick={() => suggestField('sensitivities')} disabled={!formData.name || loadingAI === 'sensitivities'} className="text-xs text-[#00CC7D] flex items-center gap-1 hover:underline disabled:opacity-50">
                   {loadingAI === 'sensitivities' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   Suggérer (IA)
                 </button>
               </div>
               <input name="sensitivities" value={formData.sensitivities || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Botrytis, Rouille..." />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Tolérances Abiotiques</label>
+              <input name="abiotic_tolerances" value={formData.abiotic_tolerances || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Gel, Sécheresse, Salinité" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Aptitude à la conservation</label>
+              <input name="conservation_aptitude" value={formData.conservation_aptitude || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#00FF9D]" placeholder="Ex: Excellente conservation au froid" />
             </div>
           </div>
         </div>

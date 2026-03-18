@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Variety, Photo } from '../types';
-import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer, Star, Share2 } from 'lucide-react';
+import { ArrowLeft, Edit3, Sparkles, Image as ImageIcon, Info, Activity, Loader2, MapPin, Camera, Printer, Star, Share2, Copy } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { getAI } from '../utils';
@@ -75,6 +75,11 @@ Partagé via BlueVault.`;
     alert("Résumé copié dans le presse-papier !");
   };
 
+  const copyField = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    alert(`${fieldName} copié dans le presse-papier !`);
+  };
+
   const renderProgressBar = (score: number, max: number = 10) => {
     const percentage = Math.min(100, Math.max(0, (score / max) * 100));
     return (
@@ -92,8 +97,11 @@ Partagé via BlueVault.`;
       {!isPrintAllMode && (
         <div className="bg-[#151619] text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-md print:hidden">
           <button onClick={onBack} className="p-2 hover:bg-[#2A2B30] rounded-full transition-colors"><ArrowLeft size={20} /></button>
-          <div className="relative group flex items-center justify-center">
+          <div className="relative group flex items-center justify-center gap-2">
             <h2 className="font-mono text-sm uppercase tracking-widest truncate max-w-[200px] cursor-help">{variety.name}</h2>
+            <button onClick={() => copyField(variety.name, 'Nom')} className="text-gray-400 hover:text-white transition-colors" title="Copier le nom">
+              <Copy size={14} />
+            </button>
             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block w-max bg-[#2A2B30] text-white text-[10px] px-2 py-1 rounded shadow-lg z-50 border border-gray-700">
               {variety.ai_analysis ? 'Analyse IA disponible' : 'Analyse IA non générée'}
             </div>
@@ -182,11 +190,41 @@ Partagé via BlueVault.`;
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Identité & Localisation</h3>
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
-                <div><span className="text-gray-400 block text-xs">Espèce</span><span className="font-medium">{variety.species || '-'}</span></div>
-                <div><span className="text-gray-400 block text-xs">Obtenteur</span><span className="font-medium">{variety.breeder || '-'}</span></div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Espèce</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{variety.species || '-'}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Nom scientifique</span>
+                  <span className="font-medium italic">{variety.scientific_name || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Code expérimental</span>
+                  <span className="font-medium">{variety.experimental_code || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Synonymes</span>
+                  <span className="font-medium">{variety.synonyms || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Obtenteur</span>
+                  <span className="font-medium">{variety.breeder || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-xs">Pays d'origine</span>
+                  <span className="font-medium">{variety.origin_country || '-'}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-400 block text-xs">Statut légal</span>
+                  <span className="font-medium">{variety.legal_status || '-'}</span>
+                </div>
                 <div className="col-span-2">
                   <span className="text-gray-400 block text-xs">Site / Localisation</span>
-                  <span className="font-medium">{variety.site || '-'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{variety.site || '-'}</span>
+                  </div>
                   {firstPhotoWithGPS && (
                     <a 
                       href={`https://www.google.com/maps/search/?api=1&query=${firstPhotoWithGPS.exif!.lat},${firstPhotoWithGPS.exif!.lng}`} 
@@ -197,6 +235,47 @@ Partagé via BlueVault.`;
                       <MapPin size={12} /> Voir sur la carte (GPS)
                     </a>
                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Morphologie Détaillée</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Tige & Rameaux</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-400 block text-[10px]">Couleur:</span> <span className="font-medium">{variety.stem_color || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Épaisseur:</span> <span className="font-medium">{variety.stem_thickness || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Entre-nœuds:</span> <span className="font-medium">{variety.stem_internode_length || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Pilosité:</span> <span className="font-medium">{variety.stem_hairiness || '-'}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Feuillage</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-400 block text-[10px]">Forme limbe:</span> <span className="font-medium">{variety.leaf_blade_shape || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Type marge:</span> <span className="font-medium">{variety.leaf_margin_type || '-'}</span></div>
+                    <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Cloqûre:</span> <span className="font-medium">{variety.leaf_blistering || '-'}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Floraison</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-400 block text-[10px]">Couleur pétales:</span> <span className="font-medium">{variety.flower_petal_color || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Pleine floraison:</span> <span className="font-medium">{variety.flower_full_bloom_time || '-'}</span></div>
+                    <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Inflorescence:</span> <span className="font-medium">{variety.flower_inflorescence_type || '-'}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2">Fruit (Organe Récolté)</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-400 block text-[10px]">Forme:</span> <span className="font-medium">{variety.harvest_organ_shape || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Calibre:</span> <span className="font-medium">{variety.harvest_organ_size || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Épiderme:</span> <span className="font-medium">{variety.harvest_organ_skin_color || '-'}</span></div>
+                    <div><span className="text-gray-400 block text-[10px]">Chair:</span> <span className="font-medium">{variety.harvest_organ_flesh_color || '-'}</span></div>
+                    <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Texture:</span> <span className="font-medium">{variety.harvest_organ_texture || '-'}</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -225,7 +304,15 @@ Partagé via BlueVault.`;
                 <div><span className="text-gray-400 block text-xs">Fermeté</span><span className="font-medium">{variety.firmness || '-'}</span></div>
                 <div><span className="text-gray-400 block text-xs">Acidité</span><span className="font-medium">{variety.acidity || '-'}</span></div>
                 <div className="col-span-2"><span className="text-gray-400 block text-xs">Arômes</span><span className="font-medium">{variety.aroma || '-'}</span></div>
-                <div className="col-span-2"><span className="text-gray-400 block text-xs">Sensibilités</span><span className="font-medium">{variety.sensitivities || '-'}</span></div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 print:shadow-none print:border-gray-300 print:mb-6">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">Agronomie & Résistances</h3>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
+                <div className="col-span-2"><span className="text-gray-400 block text-xs">Résistances Biotiques</span><span className="font-medium">{variety.sensitivities || '-'}</span></div>
+                <div className="col-span-2"><span className="text-gray-400 block text-xs">Tolérances Abiotiques</span><span className="font-medium">{variety.abiotic_tolerances || '-'}</span></div>
+                <div className="col-span-2"><span className="text-gray-400 block text-xs">Aptitude Conservation</span><span className="font-medium">{variety.conservation_aptitude || '-'}</span></div>
               </div>
             </div>
 

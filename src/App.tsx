@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Variety } from './types';
 import { getAI } from './utils';
 import { Type, ThinkingLevel } from '@google/genai';
-import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check, X, Star, Upload } from 'lucide-react';
+import { LogIn, LogOut, Plus, Search, Download, Database, Sparkles, Loader2, Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Check, X, Star, Upload, Leaf, Beaker } from 'lucide-react';
 import FormView from './components/FormView';
 import DetailView from './components/DetailView';
 import ExportModal from './components/ExportModal';
@@ -24,6 +24,8 @@ export default function App() {
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [search, setSearch] = useState('');
   const [filterSpecies, setFilterSpecies] = useState<string>('all');
+  const [filterColor, setFilterColor] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   
   // Advanced Filters
   const [showFilters, setShowFilters] = useState(false);
@@ -44,7 +46,7 @@ export default function App() {
   const ITEMS_PER_PAGE = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => setCurrentPage(1), [search, filterSpecies, sortConfig, minBrix, maxBrix, minYield, maxYield]);
+  useEffect(() => setCurrentPage(1), [search, filterSpecies, filterColor, filterStatus, sortConfig, minBrix, maxBrix, minYield, maxYield]);
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -208,27 +210,32 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
     setIsMagicSearching(true);
     try {
       const ai = getAI();
+      const prompt = `Tu es un expert en myrtilles. Analyse la requête suivante et retourne UNIQUEMENT un tableau JSON des IDs des variétés qui correspondent le mieux.
+      
+      Requête: "${magicQuery}"
+      
+      Variétés disponibles (ID, Nom, Espèce, Couleur, Brix, Rendement, Notes):
+      ${varieties.map(v => `${v.id}: ${v.name}, ${v.species}, ${v.color}, Brix:${v.brix}, Rendement:${v.yield_estimate}, Notes:${v.free_notes}`).join('\n')}
+      
+      Réponds UNIQUEMENT avec le tableau JSON, par exemple: ["id1", "id2"]`;
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Voici une liste de variétés de bleuets: ${JSON.stringify(varieties.map(v => ({ id: v.id, name: v.name, species: v.species, brix: v.brix, yield: v.yield_estimate })))}.
-        
-        L'utilisateur recherche: "${magicQuery}".
-        
-        Retourne UNIQUEMENT un tableau JSON des IDs des variétés qui correspondent le mieux à cette recherche.`,
+        contents: prompt,
         config: {
           responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          }
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
         }
       });
       
       const ids = JSON.parse(response.text || "[]");
       setMagicFilter(ids);
+      setSearch('');
+      setFilterSpecies('all');
+      setFilterColor('all');
+      setFilterStatus('all');
     } catch (e) {
       console.error("Magic Search error:", e);
-      alert("Erreur lors de la recherche magique.");
     } finally {
       setIsMagicSearching(false);
     }
@@ -297,11 +304,14 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
   };
 
   const speciesList = Array.from(new Set(varieties.map(v => v.species).filter(Boolean))) as string[];
+  const colorList = Array.from(new Set(varieties.map(v => v.color).filter(Boolean))) as string[];
 
   const filtered = varieties
     .filter(v => {
       const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase());
       const matchesSpecies = filterSpecies === 'all' || v.species === filterSpecies;
+      const matchesColor = filterColor === 'all' || v.color === filterColor;
+      const matchesStatus = filterStatus === 'all' || v.status === filterStatus;
       const matchesMagic = !magicFilter || magicFilter.includes(v.id);
       
       // Advanced Filters
@@ -313,7 +323,7 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
       const matchesMinYield = minYield === '' || (vYield !== null && vYield >= Number(minYield));
       const matchesMaxYield = maxYield === '' || (vYield !== null && vYield <= Number(maxYield));
 
-      return matchesSearch && matchesSpecies && matchesMagic && matchesMinBrix && matchesMaxBrix && matchesMinYield && matchesMaxYield;
+      return matchesSearch && matchesSpecies && matchesColor && matchesStatus && matchesMagic && matchesMinBrix && matchesMaxBrix && matchesMinYield && matchesMaxYield;
     });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -324,7 +334,11 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
       const valA = (a as any)[field];
       const valB = (b as any)[field];
 
-      if (typeof valA === 'string') {
+      if (field === 'flowering_date' || field === 'maturity_date') {
+        const dateA = valA ? new Date(valA).getTime() : 0;
+        const dateB = valB ? new Date(valB).getTime() : 0;
+        res = dateA - dateB;
+      } else if (typeof valA === 'string') {
         res = (valA || '').localeCompare(valB || '');
       } else {
         res = (Number(valA) || 0) - (Number(valB) || 0);
@@ -341,206 +355,255 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
   const paginated = sorted.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="min-h-screen bg-[#E6E6E6] text-[#151619] print:bg-white">
-      <div className="w-full max-w-7xl mx-auto bg-white min-h-screen shadow-2xl flex flex-col relative overflow-hidden print:max-w-none print:shadow-none print:w-full">
+    <div className="min-h-screen bg-bg-surround text-text-primary font-sans selection:bg-accent/30">
+      <div className="w-full max-w-7xl mx-auto min-h-screen flex flex-col relative print:max-w-none print:w-full">
         
         {view === 'home' && (
           <>
-            <div className="bg-[#151619] text-white p-6 md:p-10 pb-8 md:pb-12 rounded-b-[2rem] shadow-lg relative z-10 print:hidden">
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-[#00FF9D]/20 rounded-2xl flex items-center justify-center border border-[#00FF9D]/30 shadow-[0_0_15px_rgba(0,255,157,0.15)]">
-                    <Database className="text-[#00FF9D]" size={28} />
-                  </div>
-                  <div>
-                    <h1 className="font-mono font-bold text-2xl md:text-3xl tracking-tight">BlueVault</h1>
-                    <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">Stockage Local</p>
-                  </div>
+            <header className="sticky top-0 z-30 glass border-b border-card-border px-6 py-4 flex items-center justify-between print:hidden">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/20">
+                  <Database className="text-accent" size={20} />
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setView('map')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Carte">
-                    <MapPin size={20} />
-                  </button>
-                  <button onClick={() => setView('gallery')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Galerie">
-                    <ImageIcon size={20} />
-                  </button>
-                  <button onClick={() => setView('dashboard')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Tableau de bord">
-                    <LayoutDashboard size={20} />
-                  </button>
-                  <button onClick={() => setView('settings')} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Paramètres">
-                    <Settings size={20} />
-                  </button>
-                  <button onClick={() => setView('printAll')} disabled={varieties.length === 0} className="p-3 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50" title="Imprimer tout">
-                    <Printer size={20} />
-                  </button>
-                  <button onClick={() => setIsCompareMode(!isCompareMode)} className={`p-3 rounded-xl flex items-center justify-center transition-colors ${isCompareMode ? 'bg-[#00FF9D] text-black shadow-[0_0_15px_rgba(0,255,157,0.3)]' : 'bg-[#2A2B30] text-white hover:bg-[#3A3B40]'}`} title="Comparer">
-                    <GitCompare size={20} />
-                  </button>
+                <div>
+                  <h1 className="font-bold text-xl tracking-tight">BlueVault</h1>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest font-mono">Technical Registry</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 md:gap-6 mb-8 max-w-3xl">
-                <div className="bg-[#0A0A0C] border border-[#2A2B30] rounded-2xl p-4 md:p-6 text-center hover:border-[#00FF9D]/50 transition-colors">
-                  <div className="text-3xl md:text-4xl font-bold text-white font-mono">{varieties.length}</div>
-                  <div className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mt-2">Variétés</div>
-                </div>
-                <div className="bg-[#0A0A0C] border border-[#2A2B30] rounded-2xl p-4 md:p-6 text-center hover:border-[#00FF9D]/50 transition-colors">
-                  <div className="text-3xl md:text-4xl font-bold text-[#00FF9D] font-mono">{varieties.filter(v => v.ai_analysis).length}</div>
-                  <div className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mt-2">Analysées</div>
-                </div>
-                <div className="bg-[#0A0A0C] border border-[#2A2B30] rounded-2xl p-4 md:p-6 text-center hover:border-[#00FF9D]/50 transition-colors">
-                  <div className="text-3xl md:text-4xl font-bold text-blue-400 font-mono">{varieties.filter(v => v.photos && JSON.parse(v.photos).length > 0).length}</div>
-                  <div className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mt-2">Photos</div>
-                </div>
-              </div>
+              <div className="flex items-center gap-2">
+                <nav className="hidden md:flex items-center bg-bg-surround/50 p-1 rounded-xl border border-card-border mr-4">
+                  {[
+                    { id: 'map', icon: MapPin, label: 'Carte' },
+                    { id: 'gallery', icon: ImageIcon, label: 'Galerie' },
+                    { id: 'dashboard', icon: LayoutDashboard, label: 'Stats' },
+                    { id: 'settings', icon: Settings, label: 'Config' },
+                  ].map(item => (
+                    <button 
+                      key={item.id}
+                      onClick={() => setView(item.id as any)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-white transition-all"
+                    >
+                      <item.icon size={14} />
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
 
-              <div className="flex gap-3 max-w-md">
-                <button onClick={() => { setSelectedVariety(null); setView('form'); }} className="flex-1 bg-[#00FF9D] hover:bg-[#00CC7D] text-black font-bold py-3 md:py-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-[0_0_20px_rgba(0,255,157,0.2)] hover:shadow-[0_0_25px_rgba(0,255,157,0.4)]">
-                  <Plus size={20} /> Nouvelle variété
-                </button>
-                <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCsv} className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="px-5 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors" title="Importer CSV">
-                  <Upload size={20} />
-                </button>
-                <button onClick={() => setShowExport(true)} disabled={varieties.length === 0} className="px-5 bg-[#2A2B30] hover:bg-[#3A3B40] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50" title="Exporter">
-                  <Download size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-[#f5f5f5] print:hidden">
-              {isCompareMode && (
-                <div className="mb-6 bg-[#151619] text-white p-4 md:p-5 rounded-2xl shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-top-4 border border-[#00FF9D]/30">
-                  <div className="text-sm md:text-base">
-                    <span className="font-bold text-[#00FF9D] text-lg">{compareVarieties.length}</span> / 2 sélectionnés pour comparaison
-                  </div>
+                <div className="flex items-center gap-2">
                   <button 
-                    onClick={startComparison}
-                    disabled={compareVarieties.length < 2}
-                    className="bg-[#00FF9D] text-black px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition-all hover:bg-[#00CC7D] hover:shadow-[0_0_15px_rgba(0,255,157,0.4)]"
+                    onClick={() => setIsCompareMode(!isCompareMode)} 
+                    className={`p-2.5 rounded-xl transition-all border ${isCompareMode ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' : 'bg-white text-text-secondary border-card-border hover:border-accent/50'}`}
+                    title="Comparer"
                   >
-                    Comparer
+                    <GitCompare size={18} />
+                  </button>
+                  <button onClick={() => setView('printAll')} disabled={varieties.length === 0} className="p-2.5 bg-white border border-card-border text-text-secondary hover:text-text-primary rounded-xl transition-all disabled:opacity-50" title="Imprimer tout">
+                    <Printer size={18} />
                   </button>
                 </div>
-              )}
+              </div>
+            </header>
 
-              <div className="mb-8 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-200">
-                <div className="flex flex-col md:flex-row gap-3 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input 
-                      type="text" 
-                      placeholder="Rechercher..." 
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-2 focus:ring-[#00FF9D]/20 transition-all"
-                    />
-                  </div>
-                  <div className="relative flex-1">
-                    <Sparkles className={`absolute left-4 top-1/2 -translate-y-1/2 ${magicFilter ? 'text-[#00FF9D]' : 'text-gray-400'}`} size={20} />
-                    <input 
-                      type="text" 
-                      placeholder="Recherche magique (IA)..." 
-                      value={magicQuery}
-                      onChange={(e) => setMagicQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleMagicSearch()}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-24 py-3.5 text-sm focus:outline-none focus:border-[#00FF9D] focus:ring-2 focus:ring-[#00FF9D]/20 transition-all"
-                    />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                      {magicFilter && (
-                        <button onClick={() => { setMagicFilter(null); setMagicQuery(''); }} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
-                          <X size={16} />
-                        </button>
-                      )}
-                      <button 
-                        onClick={handleMagicSearch}
-                        disabled={isMagicSearching}
-                        className="bg-[#151619] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#2A2B30] transition-colors disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {isMagicSearching ? <Loader2 size={12} className="animate-spin" /> : 'Filtrer'}
+            <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+                <div className="lg:col-span-3">
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                    <div>
+                      <h2 className="text-3xl font-bold tracking-tight mb-2">Variétés de Myrtilles</h2>
+                      <p className="text-text-secondary text-sm max-w-xl">Gestion technique et analytique du patrimoine variétal. Suivi des performances, analyses IA et archivage photographique.</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setSelectedVariety(null); setView('form'); }} className="bg-accent hover:bg-accent-hover text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-accent/20 neo-shadow-hover">
+                        <Plus size={20} /> Nouvelle variété
                       </button>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={`px-5 py-3.5 rounded-xl flex items-center justify-center transition-all border font-medium text-sm gap-2 ${showFilters ? 'bg-[#151619] text-[#00FF9D] border-[#151619] shadow-md' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                  >
-                    <SlidersHorizontal size={18} />
-                    <span className="hidden md:inline">Filtres</span>
-                  </button>
-                </div>
 
-                {showFilters && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-5 animate-in fade-in slide-in-from-top-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Filtres Avancés</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs uppercase text-gray-500 font-bold mb-2">Brix (°Bx)</label>
-                        <div className="flex gap-3">
-                          <input type="number" placeholder="Min" value={minBrix} onChange={e => setMinBrix(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#00FF9D] focus:outline-none" />
-                          <input type="number" placeholder="Max" value={maxBrix} onChange={e => setMaxBrix(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#00FF9D] focus:outline-none" />
-                        </div>
+                  <div className="flex flex-col gap-4 mb-8">
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+                        <input 
+                          type="text" 
+                          placeholder="Rechercher par nom, espèce..." 
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="w-full bg-white border border-card-border rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 transition-all neo-shadow"
+                        />
                       </div>
-                      <div>
-                        <label className="block text-xs uppercase text-gray-500 font-bold mb-2">Rendement (kg)</label>
-                        <div className="flex gap-3">
-                          <input type="number" placeholder="Min" value={minYield} onChange={e => setMinYield(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#00FF9D] focus:outline-none" />
-                          <input type="number" placeholder="Max" value={maxYield} onChange={e => setMaxYield(e.target.value)} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#00FF9D] focus:outline-none" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                      <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mr-2 shrink-0">Espèce:</span>
-                      <button
-                        onClick={() => setFilterSpecies('all')}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 ${filterSpecies === 'all' ? 'bg-[#00FF9D] text-black shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        Toutes
-                      </button>
-                      {speciesList.map(s => (
-                        <button
-                          key={s}
-                          onClick={() => setFilterSpecies(s)}
-                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 ${filterSpecies === s ? 'bg-[#00FF9D] text-black shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mr-2 shrink-0">Trier:</span>
-                    {[
-                      { id: 'name', label: 'Nom' },
-                      { id: 'brix', label: 'Brix' },
-                      { id: 'updatedAt', label: 'Date' }
-                    ].map(col => {
-                      const activeSort = sortConfig.find(s => s.field === col.id);
-                      const isPrimary = sortConfig[0]?.field === col.id;
-                      return (
-                        <button
-                          key={col.id}
-                          onClick={() => handleSort(col.id)}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 ${isPrimary ? 'bg-[#151619] text-[#00FF9D] shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                        >
-                          {col.label}
-                          {activeSort && (
-                            activeSort.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                      <div className="relative flex-1">
+                        <Sparkles className={`absolute left-4 top-1/2 -translate-y-1/2 ${magicFilter ? 'text-accent' : 'text-text-secondary'}`} size={18} />
+                        <input 
+                          type="text" 
+                          placeholder="Recherche magique (ex: variétés sucrées en essai)..." 
+                          value={magicQuery}
+                          onChange={(e) => setMagicQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleMagicSearch()}
+                          className="w-full bg-white border border-card-border rounded-xl pl-12 pr-24 py-3 text-sm focus:outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 transition-all neo-shadow"
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          {magicFilter && (
+                            <button onClick={() => { setMagicFilter(null); setMagicQuery(''); }} className="p-1.5 text-text-secondary hover:text-danger transition-colors">
+                              <X size={16} />
+                            </button>
                           )}
-                        </button>
-                      );
-                    })}
+                          <button 
+                            onClick={handleMagicSearch}
+                            disabled={isMagicSearching}
+                            className="bg-dark-bg text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isMagicSearching ? <Loader2 size={12} className="animate-spin" /> : 'IA Filter'}
+                          </button>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`px-5 py-3 rounded-xl flex items-center justify-center transition-all border font-medium text-sm gap-2 neo-shadow ${showFilters ? 'bg-dark-bg text-accent border-dark-bg' : 'bg-white text-text-primary border-card-border hover:bg-bg-surround'}`}
+                      >
+                        <SlidersHorizontal size={18} />
+                        Filtres
+                      </button>
+                    </div>
+
+                    {showFilters && (
+                      <div className="bg-white border border-card-border rounded-2xl p-6 neo-shadow animate-in fade-in slide-in-from-top-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-secondary mb-3">Métriques Physico-chimiques</label>
+                            <div className="space-y-4">
+                              <div>
+                                <span className="text-xs text-text-secondary mb-1.5 block">Brix (°Bx)</span>
+                                <div className="flex gap-2">
+                                  <input type="number" placeholder="Min" value={minBrix} onChange={e => setMinBrix(e.target.value)} className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none" />
+                                  <input type="number" placeholder="Max" value={maxBrix} onChange={e => setMaxBrix(e.target.value)} className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none" />
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-xs text-text-secondary mb-1.5 block">Rendement (kg)</span>
+                                <div className="flex gap-2">
+                                  <input type="number" placeholder="Min" value={minYield} onChange={e => setMinYield(e.target.value)} className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none" />
+                                  <input type="number" placeholder="Max" value={maxYield} onChange={e => setMaxYield(e.target.value)} className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-secondary mb-3">Classification & Statut</label>
+                            <div className="space-y-4">
+                              <div>
+                                <span className="text-xs text-text-secondary mb-1.5 block">Espèce</span>
+                                <select value={filterSpecies} onChange={e => setFilterSpecies(e.target.value)} className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none">
+                                  <option value="all">Toutes les espèces</option>
+                                  {Array.from(new Set(varieties.map(v => v.species).filter(Boolean))).map(s => (
+                                    <option key={s} value={s!}>{s}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <span className="text-xs text-text-secondary mb-1.5 block">Statut</span>
+                                <div className="flex gap-2">
+                                  {['all', 'active', 'trial', 'archived'].map(s => (
+                                    <button 
+                                      key={s}
+                                      onClick={() => setFilterStatus(s)}
+                                      className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${filterStatus === s ? 'bg-dark-bg text-accent border-dark-bg' : 'bg-white text-text-secondary border-card-border hover:border-accent/30'}`}
+                                    >
+                                      {s === 'all' ? 'Tous' : s === 'active' ? 'Actif' : s === 'trial' ? 'Essai' : 'Arch.'}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-secondary mb-3">Tri & Affichage</label>
+                            <div className="space-y-4">
+                              <div>
+                                <span className="text-xs text-text-secondary mb-1.5 block">Critère de tri</span>
+                                <select 
+                                  value={sortConfig[0].field} 
+                                  onChange={e => setSortConfig([{ field: e.target.value, direction: sortConfig[0].direction }])}
+                                  className="w-full bg-bg-surround/50 border border-card-border rounded-lg px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                                >
+                                  <option value="name">Nom</option>
+                                  <option value="brix">Taux de sucre (Brix)</option>
+                                  <option value="yield_estimate">Rendement</option>
+                                  <option value="flowering_date">Date de floraison</option>
+                                  <option value="maturity_date">Date de maturité</option>
+                                  <option value="updatedAt">Dernière modification</option>
+                                  <option value="createdAt">Date de création</option>
+                                </select>
+                              </div>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => setSortConfig([{ ...sortConfig[0], direction: 'asc' }])}
+                                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${sortConfig[0].direction === 'asc' ? 'bg-dark-bg text-accent border-dark-bg' : 'bg-white text-text-secondary border-card-border'}`}
+                                >
+                                  Croissant
+                                </button>
+                                <button 
+                                  onClick={() => setSortConfig([{ ...sortConfig[0], direction: 'desc' }])}
+                                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${sortConfig[0].direction === 'desc' ? 'bg-dark-bg text-accent border-dark-bg' : 'bg-white text-text-secondary border-card-border'}`}
+                                >
+                                  Décroissant
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-dark-bg text-white rounded-2xl p-6 neo-shadow">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-accent">Global Stats</h3>
+                      <Database size={14} className="text-text-secondary" />
+                    </div>
+                    <div className="space-y-6">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-3xl font-bold font-mono">{varieties.length}</div>
+                          <div className="text-[10px] text-text-secondary uppercase tracking-widest mt-1">Total Variétés</div>
+                        </div>
+                        <div className="w-12 h-1 bg-accent/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-accent" style={{ width: '100%' }}></div>
+                        </div>
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-3xl font-bold font-mono text-accent">{varieties.filter(v => v.ai_analysis).length}</div>
+                          <div className="text-[10px] text-text-secondary uppercase tracking-widest mt-1">Analysées IA</div>
+                        </div>
+                        <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-accent" style={{ width: `${(varieties.filter(v => v.ai_analysis).length / (varieties.length || 1)) * 100}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-card-border rounded-2xl p-6 neo-shadow">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-secondary mb-4">Actions Rapides</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center p-4 bg-bg-surround/50 border border-card-border rounded-xl hover:border-accent/50 transition-all group">
+                        <Upload size={20} className="text-text-secondary group-hover:text-accent mb-2" />
+                        <span className="text-[10px] font-bold uppercase">Import</span>
+                      </button>
+                      <button onClick={() => setShowExport(true)} disabled={varieties.length === 0} className="flex flex-col items-center justify-center p-4 bg-bg-surround/50 border border-card-border rounded-xl hover:border-accent/50 transition-all group disabled:opacity-50">
+                        <Download size={20} className="text-text-secondary group-hover:text-accent mb-2" />
+                        <span className="text-[10px] font-bold uppercase">Export</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginated.map(v => {
                   const isSelectedForCompare = compareVarieties.some(p => p.id === v.id);
                   return (
@@ -554,66 +617,66 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
                           setView('detail');
                         }
                       }} 
-                      className={`bg-white border rounded-2xl p-5 flex flex-col cursor-pointer transition-all group ${isSelectedForCompare ? 'border-[#00FF9D] ring-2 ring-[#00FF9D]/30 shadow-lg scale-[1.02]' : 'border-gray-200 hover:border-[#00FF9D]/50 hover:shadow-lg hover:-translate-y-1'}`}
+                      className={`bg-white border rounded-2xl p-6 flex flex-col cursor-pointer transition-all group neo-shadow-hover ${isSelectedForCompare ? 'border-accent ring-4 ring-accent/10 scale-[1.02]' : 'border-card-border'}`}
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#00CC7D] transition-colors">{v.name}</h3>
-                            {v.status && (
-                              <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                v.status === 'active' ? 'bg-green-100 text-green-700' : 
-                                v.status === 'trial' ? 'bg-blue-100 text-blue-700' : 
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {v.status === 'active' ? 'Actif' : v.status === 'trial' ? 'Essai' : 'Arch.'}
-                              </span>
-                            )}
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            {v.status === 'active' && <Leaf size={14} className="text-accent" />}
+                            {v.status === 'trial' && <Beaker size={14} className="text-blue-500" />}
+                            {v.status === 'archived' && <Star size={14} className="text-amber-500" />}
+                            <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${
+                              v.status === 'active' ? 'bg-accent/10 text-accent' : 
+                              v.status === 'trial' ? 'bg-blue-100 text-blue-700' : 
+                              'bg-bg-surround text-text-secondary'
+                            }`}>
+                              {v.status === 'active' ? 'Actif' : v.status === 'trial' ? 'Essai' : 'Archivé'}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider">{v.species || 'Espèce inconnue'}</p>
-                            {v.rating && (
-                              <div className="flex gap-0.5">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star key={s} size={10} fill={s <= v.rating! ? '#FACC15' : 'none'} className={s <= v.rating! ? 'text-yellow-400' : 'text-gray-200'} />
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <h3 className="font-bold text-text-primary text-xl truncate group-hover:text-accent transition-colors">{v.name}</h3>
+                          <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-1 font-medium">{v.species || 'Espèce non spécifiée'}</p>
                         </div>
-                        {isCompareMode && (
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isSelectedForCompare ? 'bg-[#00FF9D] border-[#00FF9D]' : 'border-gray-300'}`}>
-                            {isSelectedForCompare && <Check size={14} className="text-black font-bold" />}
+                        {isCompareMode ? (
+                          <div className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 ${isSelectedForCompare ? 'bg-accent border-accent text-white' : 'border-card-border bg-bg-surround'}`}>
+                            {isSelectedForCompare && <Check size={18} strokeWidth={3} />}
                           </div>
+                        ) : (
+                          v.rating && (
+                            <div className="flex gap-0.5 bg-bg-surround px-2 py-1 rounded-lg">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} size={10} fill={s <= v.rating! ? '#FACC15' : 'none'} className={s <= v.rating! ? 'text-yellow-400' : 'text-gray-300'} />
+                              ))}
+                            </div>
+                          )
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-3 mb-4 flex-1">
-                        <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-100">
-                          <div className="text-[10px] text-gray-400 uppercase mb-1">Brix</div>
-                          <div className="font-mono font-bold text-sm text-gray-800">{v.brix ? `${v.brix}°Bx` : '-'}</div>
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-bg-surround/50 rounded-xl p-3 border border-card-border/50">
+                          <div className="text-[9px] text-text-secondary uppercase tracking-widest mb-1 font-bold">Brix</div>
+                          <div className="font-mono font-bold text-base text-text-primary">{v.brix ? `${v.brix}°` : '--'}</div>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-100">
-                          <div className="text-[10px] text-gray-400 uppercase mb-1">Rendement</div>
-                          <div className="font-mono font-bold text-sm text-gray-800">{v.yield_estimate ? `${v.yield_estimate}kg` : '-'}</div>
+                        <div className="bg-bg-surround/50 rounded-xl p-3 border border-card-border/50">
+                          <div className="text-[9px] text-text-secondary uppercase tracking-widest mb-1 font-bold">Yield</div>
+                          <div className="font-mono font-bold text-base text-text-primary">{v.yield_estimate ? `${v.yield_estimate}kg` : '--'}</div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between pt-5 border-t border-card-border">
                         <div className="flex items-center gap-2">
                           {v.photos && JSON.parse(v.photos).length > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded-md">
-                              <Camera size={12} /> <span className="hidden sm:inline">Photos</span>
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
+                              <Camera size={12} /> {JSON.parse(v.photos).length}
                             </div>
                           )}
                           {v.ai_analysis && (
-                            <div className="flex items-center gap-1 text-xs text-[#00CC7D] bg-[#00FF9D]/10 px-2 py-1 rounded-md">
-                              <Sparkles size={12} /> <span className="hidden sm:inline">IA</span>
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-1 rounded-lg">
+                              <Sparkles size={12} /> AI
                             </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">
-                          {new Date(v.updatedAt || 0).toLocaleDateString()}
+                        <div className="text-[9px] text-text-secondary font-mono">
+                          MOD: {new Date(v.updatedAt || 0).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
@@ -622,32 +685,72 @@ Sensibilités: ${variety.sensitivities || 'N/C'}`;
               </div>
               
               {paginated.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                  <Database size={48} className="mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">Aucune variété trouvée</h3>
-                  <p className="text-gray-500 text-sm max-w-md mx-auto">Essayez de modifier vos filtres ou ajoutez une nouvelle variété à votre base de données.</p>
+                <div className="text-center py-20 bg-white rounded-2xl border border-card-border neo-shadow">
+                  <Database size={48} className="mx-auto text-text-secondary mb-4 opacity-20" />
+                  <h3 className="text-lg font-bold text-text-primary mb-2">Aucune variété trouvée</h3>
+                  <p className="text-text-secondary text-sm max-w-md mx-auto">Essayez de modifier vos filtres ou ajoutez une nouvelle variété à votre base de données technique.</p>
                 </div>
               )}
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-8 bg-white border border-gray-200 rounded-xl p-3 shadow-sm max-w-md mx-auto">
+                <div className="flex items-center justify-center mt-12 gap-2">
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1 text-sm font-medium"
+                    className="p-3 rounded-xl bg-white border border-card-border hover:border-accent disabled:opacity-50 transition-all neo-shadow"
                   >
-                    <ChevronLeft size={18} /> Précédent
+                    <ChevronLeft size={20} />
                   </button>
-                  <span className="text-sm font-bold text-gray-600">
-                    {currentPage} <span className="text-gray-400 font-normal">/ {totalPages}</span>
-                  </span>
+                  <div className="flex items-center gap-1 bg-white border border-card-border px-4 py-2 rounded-xl neo-shadow">
+                    <span className="text-sm font-bold text-text-primary">{currentPage}</span>
+                    <span className="text-xs text-text-secondary">/ {totalPages}</span>
+                  </div>
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1 text-sm font-medium"
+                    className="p-3 rounded-xl bg-white border border-card-border hover:border-accent disabled:opacity-50 transition-all neo-shadow"
                   >
-                    Suivant <ChevronRight size={18} />
+                    <ChevronRight size={20} />
                   </button>
+                </div>
+              )}
+
+              {isCompareMode && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl">
+                  <div className="glass border border-accent/30 rounded-2xl p-4 flex items-center justify-between shadow-2xl shadow-accent/20 animate-in slide-in-from-bottom-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center text-white shadow-lg shadow-accent/30">
+                        <GitCompare size={20} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-accent mb-0.5">Mode Comparaison</div>
+                        <div className="text-sm font-medium">
+                          {compareVarieties.length === 0 ? (
+                            <span className="text-text-secondary">Sélectionnez 2 variétés à comparer</span>
+                          ) : compareVarieties.length === 1 ? (
+                            <span><span className="font-bold text-accent">{compareVarieties[0].name}</span> sélectionnée. Choisissez-en une autre.</span>
+                          ) : (
+                            <span>Comparer <span className="font-bold text-accent">{compareVarieties[0].name}</span> vs <span className="font-bold text-accent">{compareVarieties[1].name}</span></span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => { setIsCompareMode(false); setCompareVarieties([]); }}
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-text-secondary hover:text-text-primary transition-colors"
+                      >
+                        Annuler
+                      </button>
+                      <button 
+                        onClick={startComparison}
+                        disabled={compareVarieties.length !== 2}
+                        className="bg-accent hover:bg-accent-hover text-white px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:grayscale shadow-lg shadow-accent/20"
+                      >
+                        Lancer l'analyse
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

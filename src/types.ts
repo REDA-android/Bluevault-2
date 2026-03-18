@@ -46,6 +46,40 @@ export interface Variety {
   yield_estimate?: number;
   harvest_start?: number; // Month 1-12
   harvest_end?: number;   // Month 1-12
+  synonyms?: string;
+  experimental_code?: string;
+  scientific_name?: string;
+  origin_country?: string;
+  legal_status?: string;
+  
+  // Morphological - Stem
+  stem_color?: string;
+  stem_thickness?: string;
+  stem_internode_length?: string;
+  stem_hairiness?: string;
+  
+  // Morphological - Leaf
+  leaf_blade_shape?: string;
+  leaf_margin_type?: string;
+  leaf_blistering?: string;
+  
+  // Morphological - Flower
+  flower_petal_color?: string;
+  flower_full_bloom_time?: string;
+  flower_inflorescence_type?: string;
+  
+  // Morphological - Harvest Organ
+  harvest_organ_shape?: string;
+  harvest_organ_size?: string;
+  harvest_organ_skin_color?: string;
+  harvest_organ_flesh_color?: string;
+  harvest_organ_texture?: string;
+
+  // Agronomic
+  biotic_resistances?: string;
+  abiotic_tolerances?: string;
+  conservation_aptitude?: string;
+
   status?: 'active' | 'trial' | 'archived';
   rating?: number; // 1-5
   hardiness_zone?: string;
